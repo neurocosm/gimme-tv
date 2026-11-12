@@ -2,12 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="referrer" content="no-referrer">
   <title>Gimme TV — Ambient Art & HUD Screensaver</title>
   <meta name="description" content="Ambient Art & Ambient HUD Screensaver PWA tailored for Google TV and landscape displays">
   <meta property="og:title" content="Gimme TV — Ambient Art & HUD Screensaver">
   <meta property="og:description" content="Ambient Art & Ambient HUD Screensaver PWA tailored for Google TV and landscape displays">
+
+  <!-- PWA Manifest & App Identity -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gimme TV">
+
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -128,13 +139,23 @@
 
     <hr class="hud-divider">
 
-    <!-- 7. Build Versioning Stamp -->
+    <!-- 7. Build Versioning Stamp & Wake Lock / PWA Controls -->
     <footer class="hud-footer">
-      <span id="hud-build-stamp" class="build-stamp">v1.11112026.0000 EST</span>
-      <span class="status-indicator">
-        <span class="status-dot"></span>
-        <span>LIVE</span>
-      </span>
+      <button id="hud-build-stamp" class="build-stamp-btn" title="Tap to check for updates" aria-label="Version. Tap to check for updates">v1.11112026.0000 EST</button>
+      <div class="hud-controls-group">
+        <button id="pwa-install-btn" class="pwa-install-btn" title="Install Gimme TV as PWA" style="display: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Install</span>
+        </button>
+        <span class="status-indicator" title="Display Wake Lock Active">
+          <span class="status-dot"></span>
+          <span id="wake-status-text">AWAKE</span>
+        </span>
+      </div>
     </footer>
   </aside>
 

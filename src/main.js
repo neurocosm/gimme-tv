@@ -695,7 +695,23 @@ updateClock();
 setInterval(updateClock, 1000);
 
 if (buildStampEl) {
-  buildStampEl.textContent = formatBuildStamp();
+  const currentStamp = formatBuildStamp();
+  buildStampEl.textContent = currentStamp;
+  buildStampEl.setAttribute('data-version', currentStamp);
+
+  // Manual tap/click on version stamp triggers immediate phone-home update check
+  buildStampEl.addEventListener('click', (e) => {
+    e.stopPropagation(); // Do not advance artwork stage on version tap
+    checkPhoneHomeUpdate(true);
+  });
+
+  buildStampEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      checkPhoneHomeUpdate(true);
+    }
+  });
 }
 
 // Detect Location dynamically on boot
@@ -710,4 +726,311 @@ setInterval(detectLocation, 6 * 60 * 60 * 1000);
 // Boot Artwork Engine
 initializeArtworkEngine();
 setupUserControls();
+
+/**
+ * ----------------------------------------------------
+ * SCREEN WAKE LOCK & TV STANDBY PREVENTION ENGINE
+ * Keeps the TV panel awake continuously as an ambient screensaver
+ * ----------------------------------------------------
+ */
+let wakeLockSentinel = null;
+const wakeStatusTextEl = document.getElementById('wake-status-text');
+
+async function requestScreenWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLockSentinel = await navigator.wakeLock.request('screen');
+      if (wakeStatusTextEl) wakeStatusTextEl.textContent = 'AWAKE';
+      console.log('[WakeLock] Screen Wake Lock successfully active');
+
+      wakeLockSentinel.addEventListener('release', () => {
+        wakeLockSentinel = null;
+        console.log('[WakeLock] Screen Wake Lock was released');
+      });
+    } catch (err) {
+      console.warn('[WakeLock] Could not acquire screen wake lock:', err.message);
+      activateFallbackWakeVideo();
+    }
+  } else {
+    console.info('[WakeLock] Screen Wake Lock API unsupported; activating TV video loop fallback');
+    activateFallbackWakeVideo();
+  }
+}
+
+// Fallback for Smart TV browsers without native navigator.wakeLock
+let fallbackVideoEl = null;
+function activateFallbackWakeVideo() {
+  if (fallbackVideoEl) return;
+  try {
+    fallbackVideoEl = document.createElement('video');
+    fallbackVideoEl.setAttribute('playsinline', '');
+    fallbackVideoEl.setAttribute('muted', '');
+    fallbackVideoEl.setAttribute('loop', '');
+    fallbackVideoEl.muted = true;
+    fallbackVideoEl.style.position = 'fixed';
+    fallbackVideoEl.style.width = '1px';
+    fallbackVideoEl.style.height = '1px';
+    fallbackVideoEl.style.opacity = '0.001';
+    fallbackVideoEl.style.pointerEvents = 'none';
+    fallbackVideoEl.style.zIndex = '-1';
+    fallbackVideoEl.src = 'data:video/webm;base64,GkXfo0AgQoaBAUL3gQFC8oEEQvOBCEKCQAR3ZWJtQoeBAkKFgQIYU4BnQN+BA0KFgQIYU4BnQN+BA0KFgQIYU4BnQN+BA0KFgQIYU4BnQN+BA0KFgQIYU4BnQN+B';
+    document.body.appendChild(fallbackVideoEl);
+    fallbackVideoEl.play().catch(() => {});
+  } catch (e) {}
+}
+
+// Auto-reacquire Wake Lock on visibility change (when TV input switches back or window resumes)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    requestScreenWakeLock();
+    // Proactively query phone-home update on window resume
+    checkPhoneHomeUpdate(false);
+  }
+});
+
+// Reacquire on user interaction
+['click', 'touchstart', 'keydown'].forEach((evt) => {
+  window.addEventListener(
+    evt,
+    () => {
+      if (!wakeLockSentinel) {
+        requestScreenWakeLock();
+      }
+    },
+    { passive: true }
+  );
+});
+
+// Request Screen Wake Lock immediately on boot
+requestScreenWakeLock();
+
+/**
+ * ----------------------------------------------------
+ * PWA SERVICE WORKER & PHONE-HOME AUTO-UPDATE ENGINE
+ * (Conforming to Sections 1.2 & 5 of Architecture Guide)
+ * ----------------------------------------------------
+ */
+let swRegistration = null;
+let isCheckingUpdate = false;
+
+/**
+ * Phone-Home Update Checker
+ * @param {boolean} isManual - true when explicitly tapped/clicked by user
+ */
+async function checkPhoneHomeUpdate(isManual = false) {
+  if (isCheckingUpdate) return;
+  isCheckingUpdate = true;
+
+  const currentVersion = buildStampEl
+    ? (buildStampEl.getAttribute('data-version') || buildStampEl.textContent)
+    : '';
+
+  if (isManual && buildStampEl) {
+    buildStampEl.classList.remove('up-to-date', 'updating');
+    buildStampEl.classList.add('checking');
+    buildStampEl.textContent = 'CHECKING...';
+    buildStampEl.setAttribute('aria-busy', 'true');
+  }
+
+  try {
+    let updateFound = false;
+
+    // 1. If an updated worker is already waiting in queue, activate it immediately
+    if (swRegistration && swRegistration.waiting) {
+      updateFound = true;
+      console.log('[PWA] Waiting service worker found, sending SKIP_WAITING...');
+      if (buildStampEl) {
+        buildStampEl.classList.remove('checking');
+        buildStampEl.classList.add('updating');
+        buildStampEl.textContent = 'UPDATING...';
+      }
+      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      return;
+    }
+
+    // 2. Query ServiceWorkerRegistration to check for newer sw.js or shell updates
+    if (swRegistration) {
+      console.log('[PWA] Phoning home to check for updates...');
+      await swRegistration.update();
+
+      const targetWorker = swRegistration.installing || swRegistration.waiting;
+      if (targetWorker) {
+        updateFound = true;
+        console.log('[PWA] New version currently installing...');
+        if (buildStampEl) {
+          buildStampEl.classList.remove('checking');
+          buildStampEl.classList.add('updating');
+          buildStampEl.textContent = 'DOWNLOADING...';
+        }
+        targetWorker.addEventListener('statechange', () => {
+          if (targetWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            targetWorker.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+        return;
+      }
+    }
+
+    // 3. Cache-busted phone-home server ping to verify online connection
+    await fetch(`/?phone_home=${Date.now()}`, {
+      method: 'HEAD',
+      cache: 'no-store',
+    });
+
+    // 4. If manual check completed and no update was found, display confirmation
+    if (isManual && buildStampEl) {
+      buildStampEl.classList.remove('checking');
+      buildStampEl.classList.add('up-to-date');
+      buildStampEl.textContent = 'LATEST VERSION ✓';
+      buildStampEl.removeAttribute('aria-busy');
+
+      setTimeout(() => {
+        buildStampEl.classList.remove('up-to-date');
+        buildStampEl.textContent = currentVersion;
+        isCheckingUpdate = false;
+      }, 2200);
+    } else {
+      isCheckingUpdate = false;
+    }
+  } catch (err) {
+    console.warn('[PWA] Phone-home check encountered an error:', err);
+    if (isManual && buildStampEl) {
+      buildStampEl.classList.remove('checking');
+      buildStampEl.textContent = 'OFFLINE';
+      buildStampEl.removeAttribute('aria-busy');
+
+      setTimeout(() => {
+        buildStampEl.textContent = currentVersion;
+        isCheckingUpdate = false;
+      }, 2000);
+    } else {
+      isCheckingUpdate = false;
+    }
+  }
+}
+
+/**
+ * Listen for newly discovered Service Worker updates
+ */
+function listenForSWUpdates(reg) {
+  if (!reg) return;
+
+  // Immediate check if a worker is already waiting
+  if (reg.waiting) {
+    console.log('[PWA] Service worker was already waiting in background');
+    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  }
+
+  reg.addEventListener('updatefound', () => {
+    const newWorker = reg.installing;
+    if (!newWorker) return;
+
+    console.log('[PWA] New update discovered on server!');
+    if (buildStampEl) {
+      buildStampEl.classList.remove('checking');
+      buildStampEl.classList.add('updating');
+      buildStampEl.textContent = 'UPDATING...';
+    }
+
+    newWorker.addEventListener('statechange', () => {
+      if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+        console.log('[PWA] New version downloaded. Activating now...');
+        newWorker.postMessage({ type: 'SKIP_WAITING' });
+      }
+    });
+  });
+}
+
+async function registerPWA() {
+  if ('serviceWorker' in navigator) {
+    try {
+      swRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      console.log('[PWA] Service Worker registered with scope:', swRegistration.scope);
+
+      // Listen for background updates
+      listenForSWUpdates(swRegistration);
+
+      // Deterministic auto-check on boot
+      checkPhoneHomeUpdate(false);
+
+      // Check for updates whenever window regains focus
+      window.addEventListener('focus', () => {
+        checkPhoneHomeUpdate(false);
+      });
+
+      // Periodic background auto-check every 30 minutes
+      setInterval(() => {
+        checkPhoneHomeUpdate(false);
+      }, 30 * 60 * 1000);
+
+      // Handle transparent reload when a new service worker claims control
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          console.log('[PWA] New version activated, transparently reloading interface...');
+          if (buildStampEl) {
+            buildStampEl.textContent = 'RELOADING...';
+          }
+          setTimeout(() => {
+            window.location.reload();
+          }, 350);
+        }
+      });
+    } catch (err) {
+      console.warn('[PWA] Service Worker registration failed:', err);
+    }
+  }
+}
+
+/**
+ * ----------------------------------------------------
+ * IN-APP PWA INSTALL PROMPT
+ * ----------------------------------------------------
+ */
+let deferredInstallPrompt = null;
+const pwaInstallBtn = document.getElementById('pwa-install-btn');
+
+function setupPWAInstall() {
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+
+  // If already running in standalone PWA mode, suppress install button
+  if (isStandalone) {
+    if (pwaInstallBtn) pwaInstallBtn.style.display = 'none';
+    return;
+  }
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if (pwaInstallBtn) {
+      pwaInstallBtn.style.display = 'inline-flex';
+    }
+  });
+
+  if (pwaInstallBtn) {
+    pwaInstallBtn.addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      await deferredInstallPrompt.prompt();
+      const choice = await deferredInstallPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        pwaInstallBtn.style.display = 'none';
+        deferredInstallPrompt = null;
+      }
+    });
+  }
+
+  window.addEventListener('appinstalled', () => {
+    if (pwaInstallBtn) pwaInstallBtn.style.display = 'none';
+    deferredInstallPrompt = null;
+    console.log('[PWA] App successfully installed');
+  });
+}
+
+// Initialize PWA Lifecycle
+registerPWA();
+setupPWAInstall();
+
 
