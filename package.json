@@ -5,7 +5,8 @@
   "description": "Ambient artwork and weather screensaver PWA",
   "scripts": {
     "dev": "npx serve .",
-    "start": "npx serve ."
+    "start": "npx serve .",
+    "build": "echo 'No build step required'"
   },
   "dependencies": {
     "serve": "^14.2.4"
