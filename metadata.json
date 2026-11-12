@@ -1,0 +1,8 @@
+{
+  "name": "gimme-tv",
+  "description": "Ambient Art & Ambient HUD Screensaver PWA for TV and landscape displays",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
