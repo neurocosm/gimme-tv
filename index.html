@@ -1,1 +1,143 @@
-Hello World!
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>Gimme TV — Ambient Art & HUD Screensaver</title>
+  <meta name="description" content="Ambient Art & Ambient HUD Screensaver PWA tailored for Google TV and landscape displays">
+  <meta property="og:title" content="Gimme TV — Ambient Art & HUD Screensaver">
+  <meta property="og:description" content="Ambient Art & Ambient HUD Screensaver PWA tailored for Google TV and landscape displays">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Dual-Buffer Artwork Stage (Section 2.1 of Architecture Guide) -->
+  <main id="stage" aria-label="Ambient Artwork Stage">
+    <!-- Buffer Layer A (Pre-populated for instant paint) -->
+    <div id="layer-a" class="artwork-layer active" aria-hidden="false">
+      <div class="art-backdrop" id="backdrop-a" style="background-image: url('https://picsum.photos/id/10/1600/900.jpg');"></div>
+      <img id="artwork-a" class="art-foreground" src="https://picsum.photos/id/10/1600/900.jpg" alt="Ambient Artwork" />
+    </div>
+
+    <!-- Buffer Layer B (Staging Buffer) -->
+    <div id="layer-b" class="artwork-layer" aria-hidden="true">
+      <div class="art-backdrop" id="backdrop-b"></div>
+      <img id="artwork-b" class="art-foreground" alt="Ambient Artwork" />
+    </div>
+
+    <!-- Edge Ambient Vignette Overlay -->
+    <div class="stage-vignette" aria-hidden="true"></div>
+  </main>
+
+  <!-- Floating Right-Hand Narrow Stacked Ambient HUD -->
+  <aside class="floating-hud" aria-label="Ambient Information HUD">
+    <!-- 1. Time Block (Hours:Minutes with Stacked AM/PM and Seconds) -->
+    <section class="hud-time-section">
+      <div class="time-row">
+        <span id="hud-time-digits" class="time-digits">--:--</span>
+        <div class="time-sub-stack">
+          <span id="hud-time-period" class="time-period">--</span>
+          <span id="hud-time-seconds" class="time-seconds">:--</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Day & Date Block -->
+    <section class="hud-date-section">
+      <div id="hud-day" class="day-text">Loading...</div>
+      <div id="hud-date" class="date-text">---</div>
+    </section>
+
+    <hr class="hud-divider">
+
+    <!-- 3. Geolocation & Short Weather Condition -->
+    <section class="hud-location-condition-section">
+      <div class="location-tag">
+        <svg class="location-pin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a8 8 0 0 0-8 8c0 5.4 7.05 11.5 7.35 11.76a1 1 0 0 0 1.3 0C12.95 21.5 20 15.4 20 10a8 8 0 0 0-8-8z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        <span id="hud-location-name">WALTHAM, MA</span>
+      </div>
+      <div class="condition-badge">
+        <span id="hud-condition-icon" class="condition-icon">☁️</span>
+        <span id="hud-weather-condition" class="condition-text">OVERCAST</span>
+      </div>
+    </section>
+
+    <!-- 4. Hero Temperature -->
+    <section class="hud-temp-section">
+      <div class="temp-hero">
+        <span id="hud-weather-temp" class="temp-number">--</span>
+        <span class="temp-degree-unit">°F</span>
+      </div>
+    </section>
+
+    <!-- 5. Atmospheric Information Stack -->
+    <section class="hud-atmospheric-section">
+      <!-- Humidity -->
+      <div class="atmo-row">
+        <svg class="atmo-icon droplet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+        </svg>
+        <span id="hud-weather-humidity" class="atmo-val">--%</span>
+      </div>
+
+      <!-- UV Index (Mint/Teal Accent) -->
+      <div class="atmo-row uv-row">
+        <svg class="atmo-icon uv-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2"></path>
+          <path d="M12 20v2"></path>
+          <path d="m4.93 4.93 1.41 1.41"></path>
+          <path d="m17.66 17.66 1.41 1.41"></path>
+          <path d="M2 12h2"></path>
+          <path d="M20 12h2"></path>
+          <path d="m6.34 17.66-1.41 1.41"></path>
+          <path d="m19.07 4.93-1.41 1.41"></path>
+        </svg>
+        <span id="hud-weather-uv" class="atmo-val uv-val">--<span class="atmo-unit">uv</span></span>
+      </div>
+
+      <!-- Barometric Pressure -->
+      <div class="atmo-row">
+        <svg class="atmo-icon gauge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="m14 10-3 3"></path>
+          <path d="M12 6v1"></path>
+          <path d="M18 12h-1"></path>
+          <path d="M6 12h1"></path>
+        </svg>
+        <span id="hud-weather-pressure" class="atmo-val">--<span class="atmo-unit"> in</span></span>
+      </div>
+    </section>
+
+    <hr class="hud-divider">
+
+    <!-- 6. Artwork Metadata Attribution Card -->
+    <section class="hud-artwork-section" id="hud-artwork-card">
+      <div class="artwork-title" id="hud-art-title">Autumn Timberland Path</div>
+      <div class="artwork-artist-year">
+        <span id="hud-art-artist">Paul Jarvis</span>, <span id="hud-art-year">2023</span>
+      </div>
+      <div class="artwork-source" id="hud-art-source">
+        <span class="source-icon" id="hud-art-source-icon">📷</span>
+        <span id="hud-art-source-name">Curated Fine Photography</span>
+      </div>
+    </section>
+
+    <hr class="hud-divider">
+
+    <!-- 7. Build Versioning Stamp -->
+    <footer class="hud-footer">
+      <span id="hud-build-stamp" class="build-stamp">v1.11112026.0000 EST</span>
+      <span class="status-indicator">
+        <span class="status-dot"></span>
+        <span>LIVE</span>
+      </span>
+    </footer>
+  </aside>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
