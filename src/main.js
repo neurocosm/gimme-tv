@@ -81,21 +81,13 @@ function updateClock() {
 }
 
 /**
- * Generate Build Timestamp string (v1.MMDDYYYY.HHmm EST)
+ * Current Application Build Version (Updated with every release & feature update)
+ * Format: v1.MMDDYYYY.HHmm EST
  */
+export const APP_BUILD_VERSION = 'v1.11122026.0527 EST';
+
 function formatBuildStamp() {
-  // Computed in US Eastern Time
-  const now = new Date();
-  const estString = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
-  const estDate = new Date(estString);
-
-  const mm = String(estDate.getMonth() + 1).padStart(2, '0');
-  const dd = String(estDate.getDate()).padStart(2, '0');
-  const yyyy = estDate.getFullYear();
-  const hh = String(estDate.getHours()).padStart(2, '0');
-  const min = String(estDate.getMinutes()).padStart(2, '0');
-
-  return `v1.${mm}${dd}${yyyy}.${hh}${min} EST`;
+  return APP_BUILD_VERSION;
 }
 
 // Location DOM Element
@@ -340,7 +332,7 @@ let currentQueueIndex = 0;
 let activeLayer = 'a'; // Alternates between 'a' and 'b'
 let isTransitioning = false;
 let rotationTimer = null;
-const ROTATION_INTERVAL_MS = 60 * 1000; // 60s per slide as per specification
+const ROTATION_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes per slide
 
 /**
  * Fisher-Yates Shuffle
@@ -698,6 +690,7 @@ if (buildStampEl) {
   const currentStamp = formatBuildStamp();
   buildStampEl.textContent = currentStamp;
   buildStampEl.setAttribute('data-version', currentStamp);
+  buildStampEl.classList.remove('checking', 'updating', 'up-to-date');
 
   // Manual tap/click on version stamp triggers immediate phone-home update check
   buildStampEl.addEventListener('click', (e) => {
@@ -821,10 +814,6 @@ async function checkPhoneHomeUpdate(isManual = false) {
   if (isCheckingUpdate) return;
   isCheckingUpdate = true;
 
-  const currentVersion = buildStampEl
-    ? (buildStampEl.getAttribute('data-version') || buildStampEl.textContent)
-    : '';
-
   if (isManual && buildStampEl) {
     buildStampEl.classList.remove('up-to-date', 'updating');
     buildStampEl.classList.add('checking');
@@ -833,13 +822,10 @@ async function checkPhoneHomeUpdate(isManual = false) {
   }
 
   try {
-    let updateFound = false;
-
-    // 1. If an updated worker is already waiting in queue, activate it immediately
-    if (swRegistration && swRegistration.waiting) {
-      updateFound = true;
+    // 1. If an updated worker is waiting and we already have a controller, trigger it
+    if (swRegistration && swRegistration.waiting && navigator.serviceWorker.controller) {
       console.log('[PWA] Waiting service worker found, sending SKIP_WAITING...');
-      if (buildStampEl) {
+      if (isManual && buildStampEl) {
         buildStampEl.classList.remove('checking');
         buildStampEl.classList.add('updating');
         buildStampEl.textContent = 'UPDATING...';
@@ -848,22 +834,21 @@ async function checkPhoneHomeUpdate(isManual = false) {
       return;
     }
 
-    // 2. Query ServiceWorkerRegistration to check for newer sw.js or shell updates
+    // 2. Query ServiceWorkerRegistration to check for newer sw.js
     if (swRegistration) {
-      console.log('[PWA] Phoning home to check for updates...');
       await swRegistration.update();
 
       const targetWorker = swRegistration.installing || swRegistration.waiting;
-      if (targetWorker) {
-        updateFound = true;
+      // Only show update state if we already have an active controller (not initial boot)
+      if (targetWorker && navigator.serviceWorker.controller) {
         console.log('[PWA] New version currently installing...');
-        if (buildStampEl) {
+        if (isManual && buildStampEl) {
           buildStampEl.classList.remove('checking');
           buildStampEl.classList.add('updating');
           buildStampEl.textContent = 'DOWNLOADING...';
         }
         targetWorker.addEventListener('statechange', () => {
-          if (targetWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          if (targetWorker.state === 'installed') {
             targetWorker.postMessage({ type: 'SKIP_WAITING' });
           }
         });
@@ -879,33 +864,29 @@ async function checkPhoneHomeUpdate(isManual = false) {
 
     // 4. If manual check completed and no update was found, display confirmation
     if (isManual && buildStampEl) {
-      buildStampEl.classList.remove('checking');
+      buildStampEl.classList.remove('checking', 'updating');
       buildStampEl.classList.add('up-to-date');
       buildStampEl.textContent = 'LATEST VERSION ✓';
       buildStampEl.removeAttribute('aria-busy');
 
       setTimeout(() => {
         buildStampEl.classList.remove('up-to-date');
-        buildStampEl.textContent = currentVersion;
-        isCheckingUpdate = false;
+        buildStampEl.textContent = APP_BUILD_VERSION;
       }, 2200);
-    } else {
-      isCheckingUpdate = false;
     }
   } catch (err) {
     console.warn('[PWA] Phone-home check encountered an error:', err);
     if (isManual && buildStampEl) {
-      buildStampEl.classList.remove('checking');
+      buildStampEl.classList.remove('checking', 'updating');
       buildStampEl.textContent = 'OFFLINE';
       buildStampEl.removeAttribute('aria-busy');
 
       setTimeout(() => {
-        buildStampEl.textContent = currentVersion;
-        isCheckingUpdate = false;
+        buildStampEl.textContent = APP_BUILD_VERSION;
       }, 2000);
-    } else {
-      isCheckingUpdate = false;
     }
+  } finally {
+    isCheckingUpdate = false;
   }
 }
 
@@ -915,8 +896,8 @@ async function checkPhoneHomeUpdate(isManual = false) {
 function listenForSWUpdates(reg) {
   if (!reg) return;
 
-  // Immediate check if a worker is already waiting
-  if (reg.waiting) {
+  // Immediate check if a worker is already waiting and we have an active controller
+  if (reg.waiting && navigator.serviceWorker.controller) {
     console.log('[PWA] Service worker was already waiting in background');
     reg.waiting.postMessage({ type: 'SKIP_WAITING' });
   }
@@ -925,17 +906,38 @@ function listenForSWUpdates(reg) {
     const newWorker = reg.installing;
     if (!newWorker) return;
 
-    console.log('[PWA] New update discovered on server!');
+    // Do NOT show "UPDATING..." on initial app install
+    if (!navigator.serviceWorker.controller) {
+      console.log('[PWA] Initial service worker installing; keeping version stamp clean.');
+      return;
+    }
+
+    console.log('[PWA] Real update discovered on server!');
     if (buildStampEl) {
       buildStampEl.classList.remove('checking');
       buildStampEl.classList.add('updating');
       buildStampEl.textContent = 'UPDATING...';
     }
 
+    // Safety fallback: if update does not finish within 7 seconds, revert UI
+    const safetyTimer = setTimeout(() => {
+      if (buildStampEl && buildStampEl.classList.contains('updating')) {
+        buildStampEl.classList.remove('updating', 'checking');
+        buildStampEl.textContent = APP_BUILD_VERSION;
+      }
+    }, 7000);
+
     newWorker.addEventListener('statechange', () => {
       if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+        clearTimeout(safetyTimer);
         console.log('[PWA] New version downloaded. Activating now...');
         newWorker.postMessage({ type: 'SKIP_WAITING' });
+      } else if (newWorker.state === 'redundant') {
+        clearTimeout(safetyTimer);
+        if (buildStampEl) {
+          buildStampEl.classList.remove('updating', 'checking');
+          buildStampEl.textContent = APP_BUILD_VERSION;
+        }
       }
     });
   });

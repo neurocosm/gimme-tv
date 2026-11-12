@@ -5,7 +5,8 @@
  * Zero Image/API caching (network-only with cache: 'no-store') to prevent TV storage/memory degradation.
  */
 
-const SHELL_CACHE = 'gimme-tv-shell-v1';
+const BUILD_VERSION = 'v1.11122026.0527 EST';
+const SHELL_CACHE = `gimme-tv-shell-${BUILD_VERSION}`;
 
 const SHELL_ASSETS = [
   '/',
