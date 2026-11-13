@@ -374,6 +374,18 @@ html, body {
   opacity: 0.55;
 }
 
+.caption-source {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.50);
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.caption-dot {
+  margin: 0 7px;
+  opacity: 0.55;
+}
+
 /* 6. Versioning Footer */
 .hud-footer {
   display: flex;

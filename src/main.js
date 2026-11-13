@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm EST
  */
-export const APP_BUILD_VERSION = 'v1.11122026.1955 EST';
+export const APP_BUILD_VERSION = 'v1.11122026.2000 EST';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -253,6 +253,8 @@ const artArtistWrapEl = document.getElementById('hud-art-artist-wrap');
 const artArtistEl = document.getElementById('hud-art-artist');
 const artYearWrapEl = document.getElementById('hud-art-year-wrap');
 const artYearEl = document.getElementById('hud-art-year');
+const artSourceWrapEl = document.getElementById('hud-art-source-wrap');
+const artSourceNameEl = document.getElementById('hud-art-source-name');
 const artCaptionEl = document.getElementById('artwork-caption');
 
 // Widescreen & Landscape TV Aspect Ratio Thresholds
@@ -552,6 +554,15 @@ function updateArtworkHUD(artwork) {
       artYearWrapEl.firstChild.textContent = hasArtist ? ', ' : '';
     } else {
       artYearWrapEl.style.display = 'none';
+    }
+  }
+
+  if (artSourceWrapEl && artSourceNameEl) {
+    if (artwork.source) {
+      artSourceNameEl.textContent = artwork.source;
+      artSourceWrapEl.style.display = 'inline';
+    } else {
+      artSourceWrapEl.style.display = 'none';
     }
   }
 }
