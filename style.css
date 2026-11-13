@@ -71,7 +71,7 @@ html, body {
   z-index: 1;
 }
 
-/* Foreground Slot: Native aspect ratio uncropped artwork */
+/* Foreground Slot: Native aspect ratio uncropped artwork (auto-fills for widescreen) */
 .art-foreground {
   position: absolute;
   inset: 0;
@@ -82,22 +82,28 @@ html, body {
   z-index: 2;
 }
 
-/* Edge Ambient Vignette Overlay */
+.art-foreground.fill-cover {
+  object-fit: cover;
+}
+
+/* Edge Ambient Vignette & Subtle Bottom Caption Scrim */
 .stage-vignette {
   position: absolute;
   inset: 0;
   z-index: 3;
   pointer-events: none;
-  background: radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.45) 100%);
+  background:
+    linear-gradient(to top, rgba(0, 0, 0, 0.52) 0%, rgba(0, 0, 0, 0.16) 9%, transparent 20%),
+    radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.42) 100%);
 }
 
 /* Floating Right-Hand Narrow Ambient HUD (Glossy Frosted Glass) */
 .floating-hud {
   position: absolute;
-  top: 20px;
-  right: 22px;
-  width: 225px;
-  max-width: calc(100vw - 44px);
+  top: 18px;
+  right: 20px;
+  width: 215px;
+  max-width: calc(100vw - 40px);
   z-index: 10;
   background: linear-gradient(
     150deg,
@@ -108,15 +114,15 @@ html, body {
   backdrop-filter: blur(30px) saturate(210%) brightness(1.05);
   -webkit-backdrop-filter: blur(30px) saturate(210%) brightness(1.05);
   border: 1px solid var(--hud-border);
-  border-radius: 22px;
+  border-radius: 20px;
   box-shadow: 
     0 20px 50px rgba(0, 0, 0, 0.55),
     inset 0 1px 2px rgba(255, 255, 255, 0.35),
     inset 0 -1px 1px rgba(0, 0, 0, 0.2);
-  padding: 20px 16px;
+  padding: 15px 14px;
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  gap: 9px;
   pointer-events: auto;
   transition: opacity 0.3s ease;
 }
@@ -135,7 +141,7 @@ html, body {
 }
 
 .time-digits {
-  font-size: 2.9rem;
+  font-size: 2.7rem;
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1;
@@ -242,7 +248,7 @@ html, body {
 .hud-temp-section {
   display: flex;
   align-items: flex-start;
-  margin-top: -4px;
+  margin-top: -2px;
   margin-bottom: -2px;
 }
 
@@ -253,7 +259,7 @@ html, body {
 }
 
 .temp-number {
-  font-size: 4.2rem;
+  font-size: 3.9rem;
   font-weight: 700;
   letter-spacing: -0.05em;
   color: #f8fafc;
@@ -262,10 +268,10 @@ html, body {
 }
 
 .temp-degree-unit {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 600;
   color: #cbd5e1;
-  margin-top: 4px;
+  margin-top: 3px;
   margin-left: 2px;
   letter-spacing: -0.02em;
 }
@@ -274,7 +280,7 @@ html, body {
 .hud-atmospheric-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .atmo-row {
@@ -327,57 +333,54 @@ html, body {
   color: #2dd4bf;
 }
 
-/* 6. Artwork Metadata Attribution Card */
-.hud-artwork-section {
+/* Bottom-Left Minimal Artwork Attribution Strip */
+.artwork-caption {
+  position: absolute;
+  left: 24px;
+  bottom: 18px;
+  max-width: calc(100vw - 48px);
+  z-index: 8;
+  pointer-events: none;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  transition: opacity 0.4s ease;
-}
-
-.artwork-title {
-  font-size: 0.90rem;
-  font-weight: 700;
-  color: #ffffff;
-  line-height: 1.25;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  white-space: nowrap;
   overflow: hidden;
-}
-
-.artwork-artist-year {
   font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.72);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.75);
+  transition: opacity 0.6s ease;
+}
+
+.caption-title {
   font-weight: 500;
-  color: var(--hud-text-secondary);
-  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.88);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.artwork-source {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--hud-text-muted);
-  text-transform: uppercase;
-  margin-top: 1px;
+.caption-meta {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.65);
+  flex-shrink: 0;
 }
 
-.source-icon {
-  font-size: 0.75rem;
-  line-height: 1;
+.caption-sep {
+  margin: 0 6px;
+  opacity: 0.55;
 }
 
-/* 7. Versioning Footer */
+/* 6. Versioning Footer */
 .hud-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: -2px;
-  padding-top: 4px;
+  margin-top: -1px;
+  padding-top: 2px;
 }
 
 .build-stamp-btn {

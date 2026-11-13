@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm EST
  */
-export const APP_BUILD_VERSION = 'v1.11122026.0527 EST';
+export const APP_BUILD_VERSION = 'v1.11122026.1955 EST';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -247,13 +247,19 @@ const artworkAEl = document.getElementById('artwork-a');
 const artworkBEl = document.getElementById('artwork-b');
 const stageEl = document.getElementById('stage');
 
-// Artwork Metadata HUD Elements
+// Bottom-Left Minimal Artwork Caption Elements
 const artTitleEl = document.getElementById('hud-art-title');
+const artArtistWrapEl = document.getElementById('hud-art-artist-wrap');
 const artArtistEl = document.getElementById('hud-art-artist');
+const artYearWrapEl = document.getElementById('hud-art-year-wrap');
 const artYearEl = document.getElementById('hud-art-year');
-const artSourceIconEl = document.getElementById('hud-art-source-icon');
-const artSourceNameEl = document.getElementById('hud-art-source-name');
-const artCardEl = document.getElementById('hud-artwork-card');
+const artCaptionEl = document.getElementById('artwork-caption');
+
+// Widescreen & Landscape TV Aspect Ratio Thresholds
+const MIN_LANDSCAPE_RATIO = 1.2; // Keeps 4:3 paintings (1.33+) and widescreen; rejects portraits/squares
+const FULL_BLEED_MIN_RATIO = 1.60; // Auto-fills 16:9 screen edge-to-edge
+const FULL_BLEED_MAX_RATIO = 2.25;
+const MIN_TV_IMAGE_WIDTH = 750;
 
 /**
  * Immediate Zero-Wait Baseline Masterworks (Guarantees instant paint on boot)
@@ -362,26 +368,34 @@ async function loadLocalManifest() {
 }
 
 /**
- * Ingestion: Art Institute of Chicago (AIC)
+ * Ingestion: Art Institute of Chicago (AIC) - Landscape Filtered
  */
 async function fetchAICArtworks() {
   try {
-    const page = Math.floor(Math.random() * 5) + 1;
-    const url = `https://api.artic.edu/api/v1/artworks?page=${page}&limit=25&fields=id,title,artist_title,date_display,image_id`;
+    const page = Math.floor(Math.random() * 8) + 1;
+    const url = `https://api.artic.edu/api/v1/artworks?page=${page}&limit=40&fields=id,title,artist_title,date_display,image_id,thumbnail`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`AIC status: ${res.status}`);
     const json = await res.json();
     const items = (json.data || [])
-      .filter((d) => d.image_id && d.title)
-      .map((d) => ({
-        id: `aic-${d.id}`,
-        title: d.title || 'Untitled',
-        artist: d.artist_title || 'Unknown Artist',
-        year: d.date_display || '',
-        source: 'Art Institute of Chicago',
-        sourceIcon: '🏛️',
-        imageUrl: `https://www.artic.edu/iiif/2/${d.image_id}/full/843,/0/default.jpg`,
-      }));
+      .filter((d) => {
+        if (!d.image_id || !d.title || !d.thumbnail?.width || !d.thumbnail?.height) return false;
+        const ratio = d.thumbnail.width / d.thumbnail.height;
+        return ratio >= MIN_LANDSCAPE_RATIO;
+      })
+      .map((d) => {
+        const targetWidth = d.thumbnail.width >= 1200 ? 1200 : 843;
+        return {
+          id: `aic-${d.id}`,
+          title: d.title || 'Untitled',
+          artist: d.artist_title || 'Unknown Artist',
+          year: d.date_display || '',
+          source: 'Art Institute of Chicago',
+          sourceIcon: '🏛️',
+          aspectRatio: d.thumbnail.width / d.thumbnail.height,
+          imageUrl: `https://www.artic.edu/iiif/2/${d.image_id}/full/${targetWidth},/0/default.jpg`,
+        };
+      });
     return items;
   } catch (e) {
     console.warn('[Art] AIC fetch failed:', e);
@@ -390,26 +404,39 @@ async function fetchAICArtworks() {
 }
 
 /**
- * Ingestion: Cleveland Museum of Art (CMA)
+ * Ingestion: Cleveland Museum of Art (CMA) - Landscape Filtered
  */
 async function fetchCMAArtworks() {
   try {
-    const skip = Math.floor(Math.random() * 30);
-    const url = `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&limit=25&skip=${skip}`;
+    const skip = Math.floor(Math.random() * 40);
+    const url = `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&limit=40&skip=${skip}`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`CMA status: ${res.status}`);
     const json = await res.json();
     const items = (json.data || [])
-      .filter((d) => d.images && d.images.web && d.images.web.url)
-      .map((d) => ({
-        id: `cma-${d.id}`,
-        title: d.title || 'Untitled',
-        artist: d.creators && d.creators[0] ? d.creators[0].description : 'Unknown Artist',
-        year: d.creation_date || '',
-        source: 'Cleveland Museum of Art',
-        sourceIcon: '🏛️',
-        imageUrl: d.images.web.url,
-      }));
+      .filter((d) => {
+        const web = d.images?.web;
+        if (!web?.url || !web?.width || !web?.height) return false;
+        const w = Number(web.width);
+        const h = Number(web.height);
+        return h > 0 && w / h >= MIN_LANDSCAPE_RATIO;
+      })
+      .map((d) => {
+        const rawArtist = d.creators && d.creators[0] ? d.creators[0].description : 'Unknown Artist';
+        const cleanArtist = rawArtist.split('(')[0].trim() || rawArtist;
+        const w = Number(d.images.web.width);
+        const h = Number(d.images.web.height);
+        return {
+          id: `cma-${d.id}`,
+          title: d.title || 'Untitled',
+          artist: cleanArtist,
+          year: d.creation_date || '',
+          source: 'Cleveland Museum of Art',
+          sourceIcon: '🏛️',
+          aspectRatio: w / h,
+          imageUrl: d.images.web.url,
+        };
+      });
     return items;
   } catch (e) {
     console.warn('[Art] CMA fetch failed:', e);
@@ -418,24 +445,27 @@ async function fetchCMAArtworks() {
 }
 
 /**
- * Ingestion: Picsum Photos (Curated Unsplash Fine Art Photography)
+ * Ingestion: Picsum Photos (Curated Unsplash Fine Art Photography - Natural Landscapes Only)
  */
 async function fetchPicsumPhotography() {
   try {
     const page = Math.floor(Math.random() * 8) + 1;
-    const url = `https://picsum.photos/v2/list?page=${page}&limit=25`;
+    const url = `https://picsum.photos/v2/list?page=${page}&limit=35`;
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`Picsum status: ${res.status}`);
     const list = await res.json();
-    return list.map((d) => ({
-      id: `picsum-${d.id}`,
-      title: 'Curated Photography',
-      artist: d.author || 'Featured Photographer',
-      year: '',
-      source: 'Curated Fine Photography',
-      sourceIcon: '📷',
-      imageUrl: `https://picsum.photos/id/${d.id}/1600/900.jpg`,
-    }));
+    return list
+      .filter((d) => d.width && d.height && d.width / d.height >= MIN_LANDSCAPE_RATIO)
+      .map((d) => ({
+        id: `picsum-${d.id}`,
+        title: 'Curated Photography',
+        artist: d.author || 'Featured Photographer',
+        year: '',
+        source: 'Curated Fine Photography',
+        sourceIcon: '📷',
+        aspectRatio: 16 / 9,
+        imageUrl: `https://picsum.photos/id/${d.id}/1600/900.jpg`,
+      }));
   } catch (e) {
     console.warn('[Art] Picsum photography fetch failed:', e);
     return [];
@@ -477,41 +507,57 @@ async function fetchNASAPhotography() {
 
 /**
  * Apply artwork assets to buffer layer (a or b)
+ * Automatically switches between full-bleed cover (16:9-ish) and contain+halo (4:3 / 3:2)
  */
-function applyArtworkToLayer(layerKey, artwork) {
+function applyArtworkToLayer(layerKey, artwork, naturalRatio = null) {
   if (!artwork || !artwork.imageUrl) return;
 
-  if (layerKey === 'a') {
-    if (backdropAEl) backdropAEl.style.backgroundImage = `url("${artwork.imageUrl}")`;
-    if (artworkAEl) artworkAEl.src = artwork.imageUrl;
-  } else {
-    if (backdropBEl) backdropBEl.style.backgroundImage = `url("${artwork.imageUrl}")`;
-    if (artworkBEl) artworkBEl.src = artwork.imageUrl;
+  const ratio = naturalRatio || artwork.aspectRatio || 1.5;
+  const shouldFillCover = ratio >= FULL_BLEED_MIN_RATIO && ratio <= FULL_BLEED_MAX_RATIO;
+
+  const backdropEl = layerKey === 'a' ? backdropAEl : backdropBEl;
+  const foregroundEl = layerKey === 'a' ? artworkAEl : artworkBEl;
+
+  if (backdropEl) {
+    backdropEl.style.backgroundImage = `url("${artwork.imageUrl}")`;
+  }
+  if (foregroundEl) {
+    foregroundEl.classList.toggle('fill-cover', shouldFillCover);
+    foregroundEl.src = artwork.imageUrl;
   }
 }
 
 /**
- * Update HUD Metadata Card
+ * Update Bottom-Left Minimal Artwork Caption
  */
 function updateArtworkHUD(artwork) {
   if (!artwork) return;
 
-  if (artTitleEl) artTitleEl.textContent = artwork.title;
-  if (artArtistEl) artArtistEl.textContent = artwork.artist || 'Unknown';
-  if (artYearEl) {
-    if (artwork.year) {
+  if (artTitleEl) artTitleEl.textContent = artwork.title || 'Untitled';
+
+  const hasArtist = Boolean(artwork.artist && artwork.artist !== 'Unknown Artist');
+  const hasYear = Boolean(artwork.year);
+
+  if (artArtistWrapEl) {
+    artArtistWrapEl.style.display = hasArtist || hasYear ? 'inline' : 'none';
+  }
+  if (artArtistEl) {
+    artArtistEl.textContent = hasArtist ? artwork.artist : '';
+  }
+  if (artYearWrapEl && artYearEl) {
+    if (hasYear) {
       artYearEl.textContent = artwork.year;
-      artYearEl.style.display = 'inline';
+      artYearWrapEl.style.display = 'inline';
+      // Adjust separator comma only if artist is also shown
+      artYearWrapEl.firstChild.textContent = hasArtist ? ', ' : '';
     } else {
-      artYearEl.style.display = 'none';
+      artYearWrapEl.style.display = 'none';
     }
   }
-  if (artSourceIconEl) artSourceIconEl.textContent = artwork.sourceIcon || '🏛️';
-  if (artSourceNameEl) artSourceNameEl.textContent = artwork.source || 'Curated Collection';
 }
 
 /**
- * Preload an image URL into browser cache with a safety timeout
+ * Preload an image URL into browser memory with safety timeout & universal TV aspect-ratio gate
  */
 function preloadImage(url, timeoutMs = 6000) {
   return new Promise((resolve, reject) => {
@@ -524,7 +570,16 @@ function preloadImage(url, timeoutMs = 6000) {
 
     img.onload = () => {
       clearTimeout(timer);
-      resolve(img);
+      const w = img.naturalWidth || 0;
+      const h = img.naturalHeight || 0;
+      const ratio = h > 0 ? w / h : 0;
+
+      if (w < MIN_TV_IMAGE_WIDTH || ratio < MIN_LANDSCAPE_RATIO) {
+        reject(new Error(`Non-landscape or low-res (${w}x${h}, ratio ${ratio.toFixed(2)})`));
+        return;
+      }
+
+      resolve({ img, ratio });
     };
     img.onerror = () => {
       clearTimeout(timer);
@@ -539,7 +594,7 @@ function preloadImage(url, timeoutMs = 6000) {
  */
 async function transitionToNextArtwork(skipCount = 0) {
   if (isTransitioning || artworkQueue.length === 0) return;
-  if (skipCount > 4) {
+  if (skipCount > 12) {
     console.warn('[Art] Too many consecutive skips, resuming normal rotation');
     return;
   }
@@ -553,19 +608,21 @@ async function transitionToNextArtwork(skipCount = 0) {
   // Target the INACTIVE layer
   const targetLayerKey = activeLayer === 'a' ? 'b' : 'a';
 
+  let loadedRatio = nextArtwork.aspectRatio || null;
   try {
-    // Preload image before buffer swap
-    await preloadImage(nextArtwork.imageUrl);
+    // Preload image and validate landscape aspect ratio before buffer swap
+    const result = await preloadImage(nextArtwork.imageUrl);
+    loadedRatio = result.ratio;
   } catch (err) {
-    console.warn('[Art] Skipping unreadable artwork:', nextArtwork.title, err.message);
+    console.warn('[Art] Skipping unsuitable artwork:', nextArtwork.title, err.message);
     isTransitioning = false;
     // Advance to next
     transitionToNextArtwork(skipCount + 1);
     return;
   }
 
-  // Assign artwork to inactive layer
-  applyArtworkToLayer(targetLayerKey, nextArtwork);
+  // Assign artwork to inactive layer with smart cover/contain fit
+  applyArtworkToLayer(targetLayerKey, nextArtwork, loadedRatio);
 
   // Cross-fade buffers over 1.5s CSS transition
   if (targetLayerKey === 'a') {
@@ -590,8 +647,16 @@ async function transitionToNextArtwork(skipCount = 0) {
     activeLayer = 'b';
   }
 
-  // Update HUD card
-  updateArtworkHUD(nextArtwork);
+  // Update bottom-left caption synced with cross-fade
+  if (artCaptionEl) {
+    artCaptionEl.style.opacity = '0';
+    setTimeout(() => {
+      updateArtworkHUD(nextArtwork);
+      artCaptionEl.style.opacity = '1';
+    }, 350);
+  } else {
+    updateArtworkHUD(nextArtwork);
+  }
 
   // Allow next transition after cross-fade completes
   setTimeout(() => {
@@ -614,7 +679,7 @@ function startRotationCycle() {
  */
 async function initializeArtworkEngine() {
   // Synchronously render the initial baseline piece on layer A immediately
-  applyArtworkToLayer('a', artworkQueue[0]);
+  applyArtworkToLayer('a', artworkQueue[0], 16 / 9);
   updateArtworkHUD(artworkQueue[0]);
 
   // Concurrently fetch all online collections in the background

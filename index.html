@@ -27,7 +27,7 @@
     <!-- Buffer Layer A (Pre-populated for instant paint) -->
     <div id="layer-a" class="artwork-layer active" aria-hidden="false">
       <div class="art-backdrop" id="backdrop-a" style="background-image: url('https://picsum.photos/id/10/1600/900.jpg');"></div>
-      <img id="artwork-a" class="art-foreground" src="https://picsum.photos/id/10/1600/900.jpg" alt="Ambient Artwork" />
+      <img id="artwork-a" class="art-foreground fill-cover" src="https://picsum.photos/id/10/1600/900.jpg" alt="Ambient Artwork" />
     </div>
 
     <!-- Buffer Layer B (Staging Buffer) -->
@@ -39,6 +39,12 @@
     <!-- Edge Ambient Vignette Overlay -->
     <div class="stage-vignette" aria-hidden="true"></div>
   </main>
+
+  <!-- Bottom-Left Minimal Artwork Attribution -->
+  <div id="artwork-caption" class="artwork-caption" aria-live="polite">
+    <span id="hud-art-title" class="caption-title">Autumn Timberland Path</span>
+    <span id="hud-art-artist-wrap" class="caption-meta"><span class="caption-sep">—</span><span id="hud-art-artist">Paul Jarvis</span><span id="hud-art-year-wrap">, <span id="hud-art-year">2023</span></span></span>
+  </div>
 
   <!-- Floating Right-Hand Narrow Stacked Ambient HUD -->
   <aside class="floating-hud" aria-label="Ambient Information HUD">
@@ -125,23 +131,9 @@
 
     <hr class="hud-divider">
 
-    <!-- 6. Artwork Metadata Attribution Card -->
-    <section class="hud-artwork-section" id="hud-artwork-card">
-      <div class="artwork-title" id="hud-art-title">Autumn Timberland Path</div>
-      <div class="artwork-artist-year">
-        <span id="hud-art-artist">Paul Jarvis</span>, <span id="hud-art-year">2023</span>
-      </div>
-      <div class="artwork-source" id="hud-art-source">
-        <span class="source-icon" id="hud-art-source-icon">📷</span>
-        <span id="hud-art-source-name">Curated Fine Photography</span>
-      </div>
-    </section>
-
-    <hr class="hud-divider">
-
-    <!-- 7. Build Versioning Stamp & Wake Lock / PWA Controls -->
+    <!-- 6. Build Versioning Stamp & Wake Lock / PWA Controls -->
     <footer class="hud-footer">
-      <button id="hud-build-stamp" class="build-stamp-btn" title="Tap to check for updates" aria-label="Version. Tap to check for updates">v1.11122026.0527 EST</button>
+      <button id="hud-build-stamp" class="build-stamp-btn" title="Tap to check for updates" aria-label="Version. Tap to check for updates">v1.11122026.1955 EST</button>
       <div class="hud-controls-group">
         <button id="pwa-install-btn" class="pwa-install-btn" title="Install Gimme TV as PWA" style="display: none;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
