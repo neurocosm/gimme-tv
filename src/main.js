@@ -66,7 +66,7 @@ function updateClock() {
 
   if (timeDigitsEl) timeDigitsEl.textContent = `${hours}:${minutes}`;
   if (timePeriodEl) timePeriodEl.textContent = period;
-  if (timeSecondsEl) timeSecondsEl.textContent = `:${seconds}`;
+  if (timeSecondsEl) timeSecondsEl.textContent = seconds;
 
   // Full day name and formatted date
   const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
@@ -82,9 +82,9 @@ function updateClock() {
 
 /**
  * Current Application Build Version (Updated with every release & feature update)
- * Format: v1.MMDDYYYY.HHmm EST
+ * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11122026.2000 EST';
+export const APP_BUILD_VERSION = 'v1.11122026.2010';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -803,13 +803,13 @@ setupUserControls();
  * ----------------------------------------------------
  */
 let wakeLockSentinel = null;
-const wakeStatusTextEl = document.getElementById('wake-status-text');
+const wakeStatusDotEl = document.getElementById('wake-status-dot');
 
 async function requestScreenWakeLock() {
   if ('wakeLock' in navigator) {
     try {
       wakeLockSentinel = await navigator.wakeLock.request('screen');
-      if (wakeStatusTextEl) wakeStatusTextEl.textContent = 'AWAKE';
+      if (wakeStatusDotEl) wakeStatusDotEl.title = 'Display Wake Lock Active';
       console.log('[WakeLock] Screen Wake Lock successfully active');
 
       wakeLockSentinel.addEventListener('release', () => {

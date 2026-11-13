@@ -49,13 +49,15 @@
 
   <!-- Floating Right-Hand Narrow Stacked Ambient HUD -->
   <aside class="floating-hud" aria-label="Ambient Information HUD">
+    <span id="wake-status-dot" class="wake-corner-dot" title="Display Wake Lock Active" aria-label="Display Wake Lock Active"></span>
+
     <!-- 1. Time Block (Hours:Minutes with Stacked AM/PM and Seconds) -->
     <section class="hud-time-section">
       <div class="time-row">
         <span id="hud-time-digits" class="time-digits">--:--</span>
         <div class="time-sub-stack">
           <span id="hud-time-period" class="time-period">--</span>
-          <span id="hud-time-seconds" class="time-seconds">:--</span>
+          <span id="hud-time-seconds" class="time-seconds">--</span>
         </div>
       </div>
     </section>
@@ -132,23 +134,17 @@
 
     <hr class="hud-divider">
 
-    <!-- 6. Build Versioning Stamp & Wake Lock / PWA Controls -->
+    <!-- 6. Build Versioning Stamp & PWA Controls -->
     <footer class="hud-footer">
-      <button id="hud-build-stamp" class="build-stamp-btn" title="Tap to check for updates" aria-label="Version. Tap to check for updates">v1.11122026.2000 EST</button>
-      <div class="hud-controls-group">
-        <button id="pwa-install-btn" class="pwa-install-btn" title="Install Gimme TV as PWA" style="display: none;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          <span>Install</span>
-        </button>
-        <span class="status-indicator" title="Display Wake Lock Active">
-          <span class="status-dot"></span>
-          <span id="wake-status-text">AWAKE</span>
-        </span>
-      </div>
+      <button id="hud-build-stamp" class="build-stamp-btn" title="Tap to check for updates" aria-label="Version. Tap to check for updates">v1.11122026.2010</button>
+      <button id="pwa-install-btn" class="pwa-install-btn" title="Install Gimme TV as PWA" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Install</span>
+      </button>
     </footer>
   </aside>
 

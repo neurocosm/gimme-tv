@@ -102,8 +102,8 @@ html, body {
   position: absolute;
   top: 18px;
   right: 20px;
-  width: 215px;
-  max-width: calc(100vw - 40px);
+  width: 172px;
+  max-width: calc(100vw - 36px);
   z-index: 10;
   background: linear-gradient(
     150deg,
@@ -114,17 +114,30 @@ html, body {
   backdrop-filter: blur(30px) saturate(210%) brightness(1.05);
   -webkit-backdrop-filter: blur(30px) saturate(210%) brightness(1.05);
   border: 1px solid var(--hud-border);
-  border-radius: 20px;
+  border-radius: 18px;
   box-shadow: 
     0 20px 50px rgba(0, 0, 0, 0.55),
     inset 0 1px 2px rgba(255, 255, 255, 0.35),
     inset 0 -1px 1px rgba(0, 0, 0, 0.2);
-  padding: 15px 14px;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 8px;
   pointer-events: auto;
   transition: opacity 0.3s ease;
+}
+
+/* Option B: Minimal Wake Lock Corner Dot */
+.wake-corner-dot {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.85);
+  pointer-events: none;
 }
 
 /* 1. Time Section: Digits with Stacked AM/PM + Seconds */
@@ -137,11 +150,11 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 6px;
+  gap: 5px;
 }
 
 .time-digits {
-  font-size: 2.7rem;
+  font-size: 2.35rem;
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1;
@@ -155,20 +168,20 @@ html, body {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  line-height: 1.1;
+  line-height: 1.08;
   gap: 1px;
 }
 
 .time-period {
-  font-size: 1rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: var(--hud-accent);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .time-seconds {
-  font-size: 0.88rem;
+  font-size: 0.80rem;
   font-weight: 500;
   color: var(--hud-text-muted);
   font-variant-numeric: tabular-nums;
@@ -182,14 +195,14 @@ html, body {
 }
 
 .day-text {
-  font-size: 1.15rem;
+  font-size: 1.04rem;
   font-weight: 700;
   color: var(--hud-text-primary);
   letter-spacing: -0.01em;
 }
 
 .date-text {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 400;
   color: var(--hud-text-secondary);
   letter-spacing: 0.01em;
@@ -206,24 +219,24 @@ html, body {
 .hud-location-condition-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .location-tag {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.86rem;
+  gap: 4px;
+  font-size: 0.76rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: #ffffff;
   text-transform: uppercase;
   text-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
 }
 
 .location-pin-icon {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   color: #ffffff;
   flex-shrink: 0;
 }
@@ -231,16 +244,16 @@ html, body {
 .condition-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.84rem;
+  gap: 5px;
+  font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.9);
   text-transform: uppercase;
 }
 
 .condition-icon {
-  font-size: 1rem;
+  font-size: 0.92rem;
   line-height: 1;
 }
 
@@ -248,8 +261,8 @@ html, body {
 .hud-temp-section {
   display: flex;
   align-items: flex-start;
-  margin-top: -2px;
-  margin-bottom: -2px;
+  margin-top: -1px;
+  margin-bottom: -1px;
 }
 
 .temp-hero {
@@ -259,7 +272,7 @@ html, body {
 }
 
 .temp-number {
-  font-size: 3.9rem;
+  font-size: 3.45rem;
   font-weight: 700;
   letter-spacing: -0.05em;
   color: #f8fafc;
@@ -268,10 +281,10 @@ html, body {
 }
 
 .temp-degree-unit {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 600;
   color: #cbd5e1;
-  margin-top: 3px;
+  margin-top: 2px;
   margin-left: 2px;
   letter-spacing: -0.02em;
 }
@@ -280,19 +293,19 @@ html, body {
 .hud-atmospheric-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .atmo-row {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   font-variant-numeric: tabular-nums;
 }
 
 .atmo-icon {
-  width: 17px;
-  height: 17px;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
   stroke: rgba(255, 255, 255, 0.7);
   display: block;
@@ -314,7 +327,7 @@ html, body {
 }
 
 .atmo-val {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #ffffff;
   letter-spacing: -0.01em;
@@ -389,8 +402,9 @@ html, body {
 /* 6. Versioning Footer */
 .hud-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  gap: 8px;
   margin-top: -1px;
   padding-top: 2px;
 }
@@ -398,10 +412,10 @@ html, body {
 .build-stamp-btn {
   background: transparent;
   border: 1px solid transparent;
-  padding: 2px 6px;
-  margin: -2px -6px;
-  font-size: 0.62rem;
-  letter-spacing: 0.05em;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  font-size: 0.60rem;
+  letter-spacing: 0.04em;
   color: var(--hud-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   cursor: pointer;
@@ -459,28 +473,6 @@ html, body {
 @keyframes pulse-checking {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
-}
-
-.status-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.64rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.status-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background-color: #34d399;
-  box-shadow: 0 0 6px #34d399;
-}
-
-.hud-controls-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .pwa-install-btn {
