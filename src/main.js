@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11122026.2030';
+export const APP_BUILD_VERSION = 'v1.11132026.2202';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -508,6 +508,118 @@ async function fetchNASAPhotography() {
 }
 
 /**
+ * Strip HTML tags from Wikimedia Commons extmetadata fields
+ */
+function stripHtml(raw) {
+  if (!raw) return '';
+  const doc = new DOMParser().parseFromString(String(raw), 'text/html');
+  return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Clean up Wikimedia file/object titles for gallery-grade captions
+ */
+function cleanWikiTitle(rawTitle, fallbackLabel) {
+  let title = stripHtml(rawTitle)
+    .replace(/^File:/i, '')
+    .replace(/\.(jpe?g|png|webp|gif)$/i, '')
+    .replace(/\s*-\s*panoramio\s*\(\d+\)\s*$/i, '')
+    .replace(/\s*\(\d{6,}\)\s*$/, '')
+    .replace(/_/g, ' ')
+    .trim();
+
+  // Replace raw numeric camera/social filenames with a clean descriptive label
+  if (!title || /^[\d\s_-]+(o|n)?(-\d+)?$/i.test(title) || /^(IMG|DSC|DSCF|PXL|MVIMG)[_\s-]?\d+/i.test(title)) {
+    return fallbackLabel;
+  }
+  return title;
+}
+
+/**
+ * Ingestion: Wikimedia Commons (Street Art, Murals, Graffiti & Contemporary Public Art)
+ */
+async function fetchWikimediaStreetArt() {
+  const categories = [
+    { name: 'Category:Street_art', label: 'Street Art' },
+    { name: 'Category:Murals', label: 'Wall Mural' },
+    { name: 'Category:East_Side_Gallery', label: 'East Side Gallery Mural' },
+    { name: 'Category:Street_art_in_London', label: 'London Street Art' },
+    { name: 'Category:Street_art_in_New_York_City', label: 'NYC Street Art' },
+    { name: 'Category:Street_art_in_Berlin', label: 'Berlin Street Art' },
+    { name: 'Category:Street_art_in_Melbourne', label: 'Melbourne Street Art' },
+    { name: 'Category:Graffiti', label: 'Graffiti Art' },
+    { name: 'Category:Contemporary_art', label: 'Contemporary Art' },
+  ];
+
+  // Pick 2 distinct categories per boot for rich variety
+  const picked = shuffleArray(categories).slice(0, 2);
+
+  try {
+    const results = await Promise.all(
+      picked.map(async (cat) => {
+        const url =
+          `https://commons.wikimedia.org/w/api.php?action=query&generator=categorymembers` +
+          `&gcmtitle=${encodeURIComponent(cat.name)}&gcmtype=file&gcmlimit=25` +
+          `&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1600&format=json&origin=*`;
+
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Wikimedia status: ${res.status}`);
+        const json = await res.json();
+        const pages = Object.values(json.query?.pages || {});
+
+        return pages
+          .filter((p) => {
+            const ii = p.imageinfo?.[0];
+            if (!ii || !ii.thumburl || !ii.mime?.startsWith('image/') || ii.mime === 'image/svg+xml') {
+              return false;
+            }
+            const w = ii.thumbwidth || ii.width || 0;
+            const h = ii.thumbheight || ii.height || 0;
+            return w >= MIN_TV_IMAGE_WIDTH && h > 0 && w / h >= MIN_LANDSCAPE_RATIO;
+          })
+          .map((p) => {
+            const ii = p.imageinfo[0];
+            const meta = ii.extmetadata || {};
+            const w = ii.thumbwidth || ii.width;
+            const h = ii.thumbheight || ii.height;
+
+            const rawTitle = meta.ObjectName?.value || p.title;
+            const title = cleanWikiTitle(rawTitle, cat.label);
+
+            let artist = stripHtml(meta.Artist?.value || '')
+              .replace(/^User:/i, '')
+              .replace(/\s*\([^)]*\)\s*/g, ' ')
+              .trim();
+            if (!artist || /^unknown$/i.test(artist) || artist.length > 60) {
+              artist = 'Unknown Artist';
+            }
+
+            const rawDate = stripHtml(meta.DateTimeOriginal?.value || '');
+            const yearMatch = rawDate.match(/\b(19|20)\d{2}\b/);
+            const year = yearMatch ? yearMatch[0] : '';
+
+            return {
+              id: `wiki-${p.pageid}`,
+              title,
+              artist,
+              year,
+              source: 'Wikimedia Commons',
+              sourceIcon: '🎨',
+              aspectRatio: w / h,
+              imageUrl: ii.thumburl,
+            };
+          });
+      })
+    );
+
+    return results.flat();
+  } catch (e) {
+    console.warn('[Art] Wikimedia Commons fetch failed:', e);
+    return [];
+  }
+}
+
+/**
  * Apply artwork assets to buffer layer (a or b)
  * Automatically switches between full-bleed cover (16:9-ish) and contain+halo (4:3 / 3:2)
  */
@@ -695,12 +807,13 @@ async function initializeArtworkEngine() {
 
   // Concurrently fetch all online collections in the background
   try {
-    const [manifestItems, aicItems, cmaItems, picsumItems, nasaItems] = await Promise.all([
+    const [manifestItems, aicItems, cmaItems, picsumItems, nasaItems, wikiItems] = await Promise.all([
       loadLocalManifest(),
       fetchAICArtworks(),
       fetchCMAArtworks(),
       fetchPicsumPhotography(),
       fetchNASAPhotography(),
+      fetchWikimediaStreetArt(),
     ]);
 
     const combined = [
@@ -710,6 +823,7 @@ async function initializeArtworkEngine() {
       ...cmaItems,
       ...picsumItems,
       ...nasaItems,
+      ...wikiItems,
     ];
 
     if (combined.length > 0) {
