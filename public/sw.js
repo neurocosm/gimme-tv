@@ -5,7 +5,7 @@
  * Zero Image/API caching (network-only with cache: 'no-store') to prevent TV storage/memory degradation.
  */
 
-const BUILD_VERSION = 'v1.11132026.2202';
+const BUILD_VERSION = 'v1.11132026.2208';
 const SHELL_CACHE = `gimme-tv-shell-${BUILD_VERSION}`;
 
 const SHELL_ASSETS = [
@@ -22,8 +22,6 @@ const SHELL_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  // Proactively skip waiting to take over and activate new version
-  self.skipWaiting();
   event.waitUntil(
     caches.open(SHELL_CACHE).then((cache) => {
       return cache.addAll(SHELL_ASSETS);
@@ -53,8 +51,13 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1. External requests (Museum APIs, Open-Meteo, IIIF, Images) MUST strictly bypass CacheStorage
-  if (url.origin !== self.location.origin || event.request.destination === 'image') {
+  // 1. Let browser handle external requests/images natively (zero SW caching or proxy overhead)
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // 2. Always fetch version.json live without caching
+  if (url.pathname === '/version.json') {
     event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
   }

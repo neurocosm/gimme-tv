@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11132026.2202';
+export const APP_BUILD_VERSION = 'v1.11132026.2208';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -268,13 +268,14 @@ const MIN_TV_IMAGE_WIDTH = 750;
  */
 const BASELINE_MASTERWORKS = [
   {
-    id: 'photo-autumn',
-    title: 'Autumn Timberland Path',
-    artist: 'Paul Jarvis',
-    year: '2023',
-    source: 'Curated Fine Photography',
-    sourceIcon: '📷',
-    imageUrl: 'https://picsum.photos/id/10/1600/900.jpg',
+    id: 'aic-monet-lilies',
+    title: 'Water Lilies',
+    artist: 'Claude Monet',
+    year: '1906',
+    source: 'Art Institute of Chicago',
+    sourceIcon: '🏛️',
+    aspectRatio: 1.25,
+    imageUrl: 'https://www.artic.edu/iiif/2/3c27b499-af56-f0d5-93b5-a7f2f1ad5813/full/1200,/0/default.jpg',
   },
   {
     id: 'aic-bedroom',
@@ -283,16 +284,8 @@ const BASELINE_MASTERWORKS = [
     year: '1889',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
-    imageUrl: 'https://www.artic.edu/iiif/2/6644829f-f292-c5c4-a73c-0356a6fdbf0d/full/843,/0/default.jpg',
-  },
-  {
-    id: 'aic-monet-lilies',
-    title: 'Water Lilies',
-    artist: 'Claude Monet',
-    year: '1906',
-    source: 'Art Institute of Chicago',
-    sourceIcon: '🏛️',
-    imageUrl: 'https://www.artic.edu/iiif/2/3c27b499-af56-f0d5-93b5-a7f2f1ad5813/full/843,/0/default.jpg',
+    aspectRatio: 1.25,
+    imageUrl: 'https://www.artic.edu/iiif/2/6644829f-f292-c5c4-a73c-0356a6fdbf0d/full/1200,/0/default.jpg',
   },
   {
     id: 'aic-wheat',
@@ -301,7 +294,8 @@ const BASELINE_MASTERWORKS = [
     year: '1891',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
-    imageUrl: 'https://www.artic.edu/iiif/2/a38e2828-ec6f-ece1-a30f-70243449197b/full/843,/0/default.jpg',
+    aspectRatio: 1.44,
+    imageUrl: 'https://www.artic.edu/iiif/2/a38e2828-ec6f-ece1-a30f-70243449197b/full/1200,/0/default.jpg',
   },
   {
     id: 'aic-train',
@@ -310,16 +304,8 @@ const BASELINE_MASTERWORKS = [
     year: '1877',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
-    imageUrl: 'https://www.artic.edu/iiif/2/0f1cc0e0-e42e-be16-3f71-2022da38cb93/full/843,/0/default.jpg',
-  },
-  {
-    id: 'photo-waterfall',
-    title: 'Coastal Mist & Waterfall',
-    artist: 'Alejandro Escamilla',
-    year: '2023',
-    source: 'Curated Fine Photography',
-    sourceIcon: '📷',
-    imageUrl: 'https://picsum.photos/id/15/1600/900.jpg',
+    aspectRatio: 1.35,
+    imageUrl: 'https://www.artic.edu/iiif/2/0f1cc0e0-e42e-be16-3f71-2022da38cb93/full/1200,/0/default.jpg',
   },
   {
     id: 'nasa-carina',
@@ -328,6 +314,7 @@ const BASELINE_MASTERWORKS = [
     year: '2022',
     source: 'NASA Cosmic Library',
     sourceIcon: '🔭',
+    aspectRatio: 1.73,
     imageUrl: 'https://images-assets.nasa.gov/image/PIA14417/PIA14417~medium.jpg',
   },
 ];
@@ -355,11 +342,24 @@ function shuffleArray(array) {
 }
 
 /**
+ * Fetch wrapper with strict AbortController timeout so slow APIs never stall boot
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = 4500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Ingestion: Local Curated Manifest
  */
 async function loadLocalManifest() {
   try {
-    const res = await fetch('/local_art_manifest.json', { cache: 'no-store' });
+    const res = await fetchWithTimeout('/local_art_manifest.json', { cache: 'no-store' }, 3000);
     if (!res.ok) throw new Error('Local manifest not found');
     const data = await res.json();
     return data;
@@ -376,7 +376,7 @@ async function fetchAICArtworks() {
   try {
     const page = Math.floor(Math.random() * 8) + 1;
     const url = `https://api.artic.edu/api/v1/artworks?page=${page}&limit=40&fields=id,title,artist_title,date_display,image_id,thumbnail`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 4500);
     if (!res.ok) throw new Error(`AIC status: ${res.status}`);
     const json = await res.json();
     const items = (json.data || [])
@@ -412,7 +412,7 @@ async function fetchCMAArtworks() {
   try {
     const skip = Math.floor(Math.random() * 40);
     const url = `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&limit=40&skip=${skip}`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 4500);
     if (!res.ok) throw new Error(`CMA status: ${res.status}`);
     const json = await res.json();
     const items = (json.data || [])
@@ -453,10 +453,10 @@ async function fetchPicsumPhotography() {
   try {
     const page = Math.floor(Math.random() * 8) + 1;
     const url = `https://picsum.photos/v2/list?page=${page}&limit=35`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
     if (!res.ok) throw new Error(`Picsum status: ${res.status}`);
     const list = await res.json();
-    return list
+    const candidates = list
       .filter((d) => d.width && d.height && d.width / d.height >= MIN_LANDSCAPE_RATIO)
       .map((d) => ({
         id: `picsum-${d.id}`,
@@ -468,6 +468,17 @@ async function fetchPicsumPhotography() {
         aspectRatio: 16 / 9,
         imageUrl: `https://picsum.photos/id/${d.id}/1600/900.jpg`,
       }));
+
+    if (candidates.length === 0) return [];
+
+    // Probe image CDN responsiveness before queuing to avoid dead/522 hosts stalling rotation
+    try {
+      await preloadImage(candidates[0].imageUrl, 2500);
+      return candidates;
+    } catch (probeErr) {
+      console.warn('[Art] Picsum image CDN unhealthy/timed out, skipping batch:', probeErr.message);
+      return [];
+    }
   } catch (e) {
     console.warn('[Art] Picsum photography fetch failed:', e);
     return [];
@@ -482,7 +493,7 @@ async function fetchNASAPhotography() {
     const queries = ['nebula', 'galaxy', 'hubble', 'webb'];
     const q = queries[Math.floor(Math.random() * queries.length)];
     const url = `https://images-api.nasa.gov/search?q=${q}&media_type=image`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 4500);
     if (!res.ok) throw new Error(`NASA status: ${res.status}`);
     const json = await res.json();
     const items = (json.collection?.items || [])
@@ -562,7 +573,7 @@ async function fetchWikimediaStreetArt() {
           `&gcmtitle=${encodeURIComponent(cat.name)}&gcmtype=file&gcmlimit=25` +
           `&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1600&format=json&origin=*`;
 
-        const res = await fetch(url, { cache: 'no-store' });
+        const res = await fetchWithTimeout(url, { cache: 'no-store' }, 4500);
         if (!res.ok) throw new Error(`Wikimedia status: ${res.status}`);
         const json = await res.json();
         const pages = Object.values(json.query?.pages || {});
@@ -682,9 +693,10 @@ function updateArtworkHUD(artwork) {
 /**
  * Preload an image URL into browser memory with safety timeout & universal TV aspect-ratio gate
  */
-function preloadImage(url, timeoutMs = 6000) {
+function preloadImage(url, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    img.referrerPolicy = 'no-referrer';
     const timer = setTimeout(() => {
       img.onload = null;
       img.onerror = null;
@@ -713,41 +725,11 @@ function preloadImage(url, timeoutMs = 6000) {
 }
 
 /**
- * Dual-Buffer Cross-Fade Transition
+ * Commit artwork to target layer, cross-fade buffers, and update caption
  */
-async function transitionToNextArtwork(skipCount = 0) {
-  if (isTransitioning || artworkQueue.length === 0) return;
-  if (skipCount > 12) {
-    console.warn('[Art] Too many consecutive skips, resuming normal rotation');
-    return;
-  }
+function commitLayerTransition(targetLayerKey, artwork, ratio) {
+  applyArtworkToLayer(targetLayerKey, artwork, ratio);
 
-  isTransitioning = true;
-
-  // Advance queue index
-  currentQueueIndex = (currentQueueIndex + 1) % artworkQueue.length;
-  const nextArtwork = artworkQueue[currentQueueIndex];
-
-  // Target the INACTIVE layer
-  const targetLayerKey = activeLayer === 'a' ? 'b' : 'a';
-
-  let loadedRatio = nextArtwork.aspectRatio || null;
-  try {
-    // Preload image and validate landscape aspect ratio before buffer swap
-    const result = await preloadImage(nextArtwork.imageUrl);
-    loadedRatio = result.ratio;
-  } catch (err) {
-    console.warn('[Art] Skipping unsuitable artwork:', nextArtwork.title, err.message);
-    isTransitioning = false;
-    // Advance to next
-    transitionToNextArtwork(skipCount + 1);
-    return;
-  }
-
-  // Assign artwork to inactive layer with smart cover/contain fit
-  applyArtworkToLayer(targetLayerKey, nextArtwork, loadedRatio);
-
-  // Cross-fade buffers over 1.5s CSS transition
   if (targetLayerKey === 'a') {
     if (layerAEl) {
       layerAEl.classList.add('active');
@@ -770,21 +752,64 @@ async function transitionToNextArtwork(skipCount = 0) {
     activeLayer = 'b';
   }
 
-  // Update bottom-left caption synced with cross-fade
   if (artCaptionEl) {
     artCaptionEl.style.opacity = '0';
     setTimeout(() => {
-      updateArtworkHUD(nextArtwork);
+      updateArtworkHUD(artwork);
       artCaptionEl.style.opacity = '1';
     }, 350);
   } else {
-    updateArtworkHUD(nextArtwork);
+    updateArtworkHUD(artwork);
   }
 
-  // Allow next transition after cross-fade completes
   setTimeout(() => {
     isTransitioning = false;
   }, 1600);
+}
+
+/**
+ * Dual-Buffer Cross-Fade Transition
+ */
+async function transitionToNextArtwork(skipCount = 0) {
+  if (isTransitioning || artworkQueue.length === 0) return;
+
+  const targetLayerKey = activeLayer === 'a' ? 'b' : 'a';
+
+  if (skipCount > 12) {
+    console.warn('[Art] Too many consecutive skips, applying verified baseline fallback');
+    isTransitioning = true;
+    const fallback = BASELINE_MASTERWORKS[Math.floor(Math.random() * BASELINE_MASTERWORKS.length)];
+    let fallbackRatio = fallback.aspectRatio || 1.33;
+    try {
+      const result = await preloadImage(fallback.imageUrl, 5000);
+      fallbackRatio = result.ratio;
+    } catch (_) {
+      // Proceed with fallback asset directly so screen never remains blank
+    }
+    commitLayerTransition(targetLayerKey, fallback, fallbackRatio);
+    return;
+  }
+
+  isTransitioning = true;
+
+  // Advance queue index
+  currentQueueIndex = (currentQueueIndex + 1) % artworkQueue.length;
+  const nextArtwork = artworkQueue[currentQueueIndex];
+
+  let loadedRatio = nextArtwork.aspectRatio || null;
+  try {
+    // Preload image and validate landscape aspect ratio before buffer swap
+    const result = await preloadImage(nextArtwork.imageUrl, 5000);
+    loadedRatio = result.ratio;
+  } catch (err) {
+    console.warn('[Art] Skipping unsuitable artwork:', nextArtwork.title, err.message);
+    isTransitioning = false;
+    // Advance to next
+    transitionToNextArtwork(skipCount + 1);
+    return;
+  }
+
+  commitLayerTransition(targetLayerKey, nextArtwork, loadedRatio);
 }
 
 /**
@@ -798,56 +823,64 @@ function startRotationCycle() {
 }
 
 /**
- * Populate In-Memory Artwork Queue
+ * Progressively merge newly resolved collections into the live queue without blocking boot
  */
-async function initializeArtworkEngine() {
+function mergeIntoArtworkQueue(newItems) {
+  if (!Array.isArray(newItems) || newItems.length === 0) return;
+  const existingIds = new Set(artworkQueue.map((item) => item.id));
+  const freshItems = newItems.filter((item) => item && item.imageUrl && !existingIds.has(item.id));
+  if (freshItems.length === 0) return;
+
+  const currentItem = artworkQueue[currentQueueIndex];
+  const before = artworkQueue.slice(0, currentQueueIndex + 1);
+  const remaining = artworkQueue.slice(currentQueueIndex + 1);
+  const mergedTail = shuffleArray([...remaining, ...freshItems]);
+
+  artworkQueue = currentItem ? [...before, ...mergedTail] : shuffleArray(freshItems);
+  console.log(`[Art Engine] Merged ${freshItems.length} pieces. Total queue: ${artworkQueue.length}`);
+}
+
+/**
+ * Populate In-Memory Artwork Queue (Non-Blocking Progressive Ingestion)
+ */
+function initializeArtworkEngine() {
   // Synchronously render the initial baseline piece on layer A immediately
-  applyArtworkToLayer('a', artworkQueue[0], 16 / 9);
-  updateArtworkHUD(artworkQueue[0]);
+  const initialArtwork = artworkQueue[0];
+  applyArtworkToLayer('a', initialArtwork, initialArtwork?.aspectRatio || 1.25);
+  updateArtworkHUD(initialArtwork);
 
-  // Concurrently fetch all online collections in the background
-  try {
-    const [manifestItems, aicItems, cmaItems, picsumItems, nasaItems, wikiItems] = await Promise.all([
-      loadLocalManifest(),
-      fetchAICArtworks(),
-      fetchCMAArtworks(),
-      fetchPicsumPhotography(),
-      fetchNASAPhotography(),
-      fetchWikimediaStreetArt(),
-    ]);
-
-    const combined = [
-      ...BASELINE_MASTERWORKS,
-      ...manifestItems,
-      ...aicItems,
-      ...cmaItems,
-      ...picsumItems,
-      ...nasaItems,
-      ...wikiItems,
-    ];
-
-    if (combined.length > 0) {
-      // Remove duplicates by ID and shuffle
-      const uniqueMap = new Map();
-      combined.forEach((item) => {
-        if (item.imageUrl && !uniqueMap.has(item.id)) {
-          uniqueMap.set(item.id, item);
-        }
-      });
-
-      const uniqueList = Array.from(uniqueMap.values());
-      const shuffled = shuffleArray(uniqueList);
-
-      // Keep current playing item at position 0, shuffle the rest
-      artworkQueue = [artworkQueue[0], ...shuffled.filter((item) => item.id !== artworkQueue[0]?.id)];
-      console.log(`[Art Engine] Ingestion complete. Total queue: ${artworkQueue.length} pieces.`);
+  // Guard against boot image failure so stage never sits black
+  if (artworkAEl) {
+    const handleBootError = () => {
+      if (activeLayer === 'a' && !isTransitioning) {
+        console.warn('[Art] Initial layer A image failed, advancing to next artwork');
+        transitionToNextArtwork();
+      }
+    };
+    artworkAEl.addEventListener('error', handleBootError);
+    if (artworkAEl.complete && artworkAEl.naturalWidth === 0) {
+      handleBootError();
     }
-  } catch (err) {
-    console.warn('[Art] Remote collection assembly warning:', err);
   }
 
-  // Start auto-rotation
+  // Start rotation immediately; never block on slow remote sources
   startRotationCycle();
+
+  // Concurrently fetch each collection and merge progressively as each resolves
+  const sources = [
+    loadLocalManifest(),
+    fetchAICArtworks(),
+    fetchCMAArtworks(),
+    fetchNASAPhotography(),
+    fetchWikimediaStreetArt(),
+    fetchPicsumPhotography(),
+  ];
+
+  sources.forEach((promise) => {
+    promise
+      .then((items) => mergeIntoArtworkQueue(items))
+      .catch((err) => console.warn('[Art] Collection warning:', err));
+  });
 }
 
 /**
@@ -995,73 +1028,112 @@ requestScreenWakeLock();
  */
 let swRegistration = null;
 let isCheckingUpdate = false;
+let updateAvailableVersion = null;
 
 /**
- * Phone-Home Update Checker
+ * Display subtle "UPDATE AVAILABLE" badge on the version button until tapped
+ */
+function showUpdateAvailableUI(newVer = null) {
+  if (!buildStampEl) return;
+  buildStampEl.classList.remove('checking', 'updating', 'up-to-date');
+  buildStampEl.classList.add('update-available');
+  buildStampEl.textContent = 'UPDATE AVAILABLE';
+  buildStampEl.removeAttribute('aria-busy');
+  buildStampEl.title = newVer
+    ? `Update ${newVer} available — tap to reload`
+    : 'New update ready — tap to reload';
+}
+
+/**
+ * Apply pending update when user taps "UPDATE AVAILABLE"
+ */
+function applyPendingUpdate() {
+  if (buildStampEl) {
+    buildStampEl.classList.remove('checking', 'update-available', 'up-to-date');
+    buildStampEl.classList.add('updating');
+    buildStampEl.textContent = 'UPDATING...';
+  }
+
+  if (swRegistration && swRegistration.waiting && navigator.serviceWorker.controller) {
+    console.log('[PWA] Activating waiting service worker...');
+    swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    // Safety reload fallback in case controllerchange does not fire
+    setTimeout(() => {
+      window.location.reload();
+    }, 2500);
+    return;
+  }
+
+  console.log('[PWA] Applying server update via reload...');
+  if (buildStampEl) buildStampEl.textContent = 'RELOADING...';
+  setTimeout(() => {
+    window.location.reload();
+  }, 300);
+}
+
+/**
+ * Phone-Home Update Checker (queries both Service Worker & /version.json)
  * @param {boolean} isManual - true when explicitly tapped/clicked by user
  */
 async function checkPhoneHomeUpdate(isManual = false) {
+  // If an update is already flagged and user taps the badge, apply it right away
+  if (
+    isManual &&
+    (updateAvailableVersion || (swRegistration?.waiting && navigator.serviceWorker.controller))
+  ) {
+    applyPendingUpdate();
+    return;
+  }
+
   if (isCheckingUpdate) return;
   isCheckingUpdate = true;
 
   if (isManual && buildStampEl) {
-    buildStampEl.classList.remove('up-to-date', 'updating');
+    buildStampEl.classList.remove('up-to-date', 'updating', 'update-available');
     buildStampEl.classList.add('checking');
     buildStampEl.textContent = 'CHECKING...';
     buildStampEl.setAttribute('aria-busy', 'true');
   }
 
   try {
-    // 1. If an updated worker is waiting and we already have a controller, trigger it
-    if (swRegistration && swRegistration.waiting && navigator.serviceWorker.controller) {
-      console.log('[PWA] Waiting service worker found, sending SKIP_WAITING...');
-      if (isManual && buildStampEl) {
-        buildStampEl.classList.remove('checking');
-        buildStampEl.classList.add('updating');
-        buildStampEl.textContent = 'UPDATING...';
-      }
-      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      return;
-    }
-
-    // 2. Query ServiceWorkerRegistration to check for newer sw.js
+    // 1. Check Service Worker for newer sw.js
     if (swRegistration) {
       await swRegistration.update();
 
-      const targetWorker = swRegistration.installing || swRegistration.waiting;
-      // Only show update state if we already have an active controller (not initial boot)
-      if (targetWorker && navigator.serviceWorker.controller) {
-        console.log('[PWA] New version currently installing...');
-        if (isManual && buildStampEl) {
-          buildStampEl.classList.remove('checking');
-          buildStampEl.classList.add('updating');
-          buildStampEl.textContent = 'DOWNLOADING...';
-        }
-        targetWorker.addEventListener('statechange', () => {
-          if (targetWorker.state === 'installed') {
-            targetWorker.postMessage({ type: 'SKIP_WAITING' });
-          }
-        });
+      if (swRegistration.waiting && navigator.serviceWorker.controller) {
+        updateAvailableVersion = updateAvailableVersion || 'new';
+        showUpdateAvailableUI(updateAvailableVersion);
         return;
       }
     }
 
-    // 3. Cache-busted phone-home server ping to verify online connection
-    await fetch(`/?phone_home=${Date.now()}`, {
-      method: 'HEAD',
+    // 2. Fetch live /version.json bypassing all caches
+    const verRes = await fetch(`/version.json?t=${Date.now()}`, {
       cache: 'no-store',
     });
 
-    // 4. If manual check completed and no update was found, display confirmation
+    if (verRes.ok) {
+      const verData = await verRes.json();
+      if (verData?.version && verData.version !== APP_BUILD_VERSION) {
+        console.log(`[PWA] Newer version detected: ${verData.version} (current: ${APP_BUILD_VERSION})`);
+        updateAvailableVersion = verData.version;
+        showUpdateAvailableUI(verData.version);
+        return;
+      }
+    }
+
+    // 3. If manual check completed and no update was found, display confirmation
     if (isManual && buildStampEl) {
-      buildStampEl.classList.remove('checking', 'updating');
+      buildStampEl.classList.remove('checking', 'updating', 'update-available');
       buildStampEl.classList.add('up-to-date');
       buildStampEl.textContent = 'LATEST VERSION ✓';
       buildStampEl.removeAttribute('aria-busy');
 
       setTimeout(() => {
-        buildStampEl.classList.remove('up-to-date');
-        buildStampEl.textContent = APP_BUILD_VERSION;
+        if (!updateAvailableVersion) {
+          buildStampEl.classList.remove('up-to-date');
+          buildStampEl.textContent = APP_BUILD_VERSION;
+        }
       }, 2200);
     }
   } catch (err) {
@@ -1072,7 +1144,11 @@ async function checkPhoneHomeUpdate(isManual = false) {
       buildStampEl.removeAttribute('aria-busy');
 
       setTimeout(() => {
-        buildStampEl.textContent = APP_BUILD_VERSION;
+        if (updateAvailableVersion) {
+          showUpdateAvailableUI(updateAvailableVersion);
+        } else {
+          buildStampEl.textContent = APP_BUILD_VERSION;
+        }
       }, 2000);
     }
   } finally {
@@ -1086,48 +1162,28 @@ async function checkPhoneHomeUpdate(isManual = false) {
 function listenForSWUpdates(reg) {
   if (!reg) return;
 
-  // Immediate check if a worker is already waiting and we have an active controller
+  // If a newer worker is already waiting, notify user in the HUD
   if (reg.waiting && navigator.serviceWorker.controller) {
-    console.log('[PWA] Service worker was already waiting in background');
-    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    console.log('[PWA] Waiting service worker ready for activation');
+    updateAvailableVersion = updateAvailableVersion || 'new';
+    showUpdateAvailableUI();
   }
 
   reg.addEventListener('updatefound', () => {
     const newWorker = reg.installing;
     if (!newWorker) return;
 
-    // Do NOT show "UPDATING..." on initial app install
+    // Do NOT flag initial app install as an update
     if (!navigator.serviceWorker.controller) {
-      console.log('[PWA] Initial service worker installing; keeping version stamp clean.');
+      console.log('[PWA] Initial service worker installing.');
       return;
     }
 
-    console.log('[PWA] Real update discovered on server!');
-    if (buildStampEl) {
-      buildStampEl.classList.remove('checking');
-      buildStampEl.classList.add('updating');
-      buildStampEl.textContent = 'UPDATING...';
-    }
-
-    // Safety fallback: if update does not finish within 7 seconds, revert UI
-    const safetyTimer = setTimeout(() => {
-      if (buildStampEl && buildStampEl.classList.contains('updating')) {
-        buildStampEl.classList.remove('updating', 'checking');
-        buildStampEl.textContent = APP_BUILD_VERSION;
-      }
-    }, 7000);
-
     newWorker.addEventListener('statechange', () => {
       if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-        clearTimeout(safetyTimer);
-        console.log('[PWA] New version downloaded. Activating now...');
-        newWorker.postMessage({ type: 'SKIP_WAITING' });
-      } else if (newWorker.state === 'redundant') {
-        clearTimeout(safetyTimer);
-        if (buildStampEl) {
-          buildStampEl.classList.remove('updating', 'checking');
-          buildStampEl.textContent = APP_BUILD_VERSION;
-        }
+        console.log('[PWA] New version ready! Displaying UPDATE AVAILABLE.');
+        updateAvailableVersion = updateAvailableVersion || 'new';
+        showUpdateAvailableUI();
       }
     });
   });
@@ -1139,21 +1195,8 @@ async function registerPWA() {
       swRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
       console.log('[PWA] Service Worker registered with scope:', swRegistration.scope);
 
-      // Listen for background updates
+      // Listen for background SW updates
       listenForSWUpdates(swRegistration);
-
-      // Deterministic auto-check on boot
-      checkPhoneHomeUpdate(false);
-
-      // Check for updates whenever window regains focus
-      window.addEventListener('focus', () => {
-        checkPhoneHomeUpdate(false);
-      });
-
-      // Periodic background auto-check every 30 minutes
-      setInterval(() => {
-        checkPhoneHomeUpdate(false);
-      }, 30 * 60 * 1000);
 
       // Handle transparent reload when a new service worker claims control
       let refreshing = false;
@@ -1162,17 +1205,32 @@ async function registerPWA() {
           refreshing = true;
           console.log('[PWA] New version activated, transparently reloading interface...');
           if (buildStampEl) {
+            buildStampEl.classList.remove('update-available', 'checking');
+            buildStampEl.classList.add('updating');
             buildStampEl.textContent = 'RELOADING...';
           }
           setTimeout(() => {
             window.location.reload();
-          }, 350);
+          }, 300);
         }
       });
     } catch (err) {
       console.warn('[PWA] Service Worker registration failed:', err);
     }
   }
+
+  // Deterministic auto-check on boot
+  checkPhoneHomeUpdate(false);
+
+  // Check for updates whenever window regains focus
+  window.addEventListener('focus', () => {
+    checkPhoneHomeUpdate(false);
+  });
+
+  // Periodic background auto-check every 15 minutes
+  setInterval(() => {
+    checkPhoneHomeUpdate(false);
+  }, 15 * 60 * 1000);
 }
 
 /**

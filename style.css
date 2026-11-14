@@ -462,12 +462,21 @@ html, body {
   font-weight: 600;
 }
 
+.build-stamp-btn.update-available {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.45);
+  background: rgba(56, 189, 248, 0.16);
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.45);
+  font-weight: 500;
+  animation: pulse-checking 2.2s infinite ease-in-out;
+}
+
 .build-stamp-btn.updating {
   color: #38bdf8;
   border-color: rgba(56, 189, 248, 0.4);
   background: rgba(56, 189, 248, 0.15);
   animation: pulse-checking 0.8s infinite ease-in-out;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 @keyframes pulse-checking {
