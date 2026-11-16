@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11132026.2208';
+export const APP_BUILD_VERSION = 'v1.11162026.1710';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -264,9 +264,31 @@ const FULL_BLEED_MAX_RATIO = 2.25;
 const MIN_TV_IMAGE_WIDTH = 750;
 
 /**
- * Immediate Zero-Wait Baseline Masterworks (Guarantees instant paint on boot)
+ * Immediate Zero-Wait Baseline Masterworks (Diverse starter pool across art & space)
  */
 const BASELINE_MASTERWORKS = [
+  {
+    id: 'aic-nighthawks',
+    title: 'Nighthawks',
+    artist: 'Edward Hopper',
+    year: '1942',
+    source: 'Art Institute of Chicago',
+    sourceIcon: '🏛️',
+    genre: 'museum',
+    aspectRatio: 1.83,
+    imageUrl: 'https://www.artic.edu/iiif/2/831a05de-d3f6-f4fa-a460-23008dd58dda/full/1200,/0/default.jpg',
+  },
+  {
+    id: 'aic-grande-jatte',
+    title: 'A Sunday on La Grande Jatte — 1884',
+    artist: 'Georges Seurat',
+    year: '1884–86',
+    source: 'Art Institute of Chicago',
+    sourceIcon: '🏛️',
+    genre: 'museum',
+    aspectRatio: 1.49,
+    imageUrl: 'https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f9981972eb/full/1200,/0/default.jpg',
+  },
   {
     id: 'aic-monet-lilies',
     title: 'Water Lilies',
@@ -274,6 +296,7 @@ const BASELINE_MASTERWORKS = [
     year: '1906',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
+    genre: 'museum',
     aspectRatio: 1.25,
     imageUrl: 'https://www.artic.edu/iiif/2/3c27b499-af56-f0d5-93b5-a7f2f1ad5813/full/1200,/0/default.jpg',
   },
@@ -284,6 +307,7 @@ const BASELINE_MASTERWORKS = [
     year: '1889',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
+    genre: 'museum',
     aspectRatio: 1.25,
     imageUrl: 'https://www.artic.edu/iiif/2/6644829f-f292-c5c4-a73c-0356a6fdbf0d/full/1200,/0/default.jpg',
   },
@@ -294,6 +318,7 @@ const BASELINE_MASTERWORKS = [
     year: '1891',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
+    genre: 'museum',
     aspectRatio: 1.44,
     imageUrl: 'https://www.artic.edu/iiif/2/a38e2828-ec6f-ece1-a30f-70243449197b/full/1200,/0/default.jpg',
   },
@@ -304,6 +329,7 @@ const BASELINE_MASTERWORKS = [
     year: '1877',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
+    genre: 'museum',
     aspectRatio: 1.35,
     imageUrl: 'https://www.artic.edu/iiif/2/0f1cc0e0-e42e-be16-3f71-2022da38cb93/full/1200,/0/default.jpg',
   },
@@ -314,20 +340,95 @@ const BASELINE_MASTERWORKS = [
     year: '2022',
     source: 'NASA Cosmic Library',
     sourceIcon: '🔭',
+    genre: 'cosmos',
     aspectRatio: 1.73,
     imageUrl: 'https://images-assets.nasa.gov/image/PIA14417/PIA14417~medium.jpg',
+  },
+  {
+    id: 'nasa-lagoon',
+    title: 'Hubble Reveals Heart of Lagoon Nebula',
+    artist: 'NASA / ESA / STScI',
+    year: '2017',
+    source: 'NASA Cosmic Library',
+    sourceIcon: '🔭',
+    genre: 'cosmos',
+    aspectRatio: 1.5,
+    imageUrl: 'https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001955/GSFC_20171208_Archive_e001955~medium.jpg',
   },
 ];
 
 /**
- * Multi-Source Artwork Ingestion & Dual-Buffer Engine
+ * Lightweight "Recently Seen" Ring Buffer (IDs only, ~4KB max, zero image caching)
  */
-let artworkQueue = [...BASELINE_MASTERWORKS];
+const SEEN_HISTORY_KEY = 'gimme_tv_seen_ids';
+const MAX_SEEN_HISTORY = 250;
+let seenHistoryList = [];
+let seenHistorySet = new Set();
+
+function loadSeenHistory() {
+  try {
+    const raw = localStorage.getItem(SEEN_HISTORY_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      seenHistoryList = parsed.filter((id) => typeof id === 'string').slice(-MAX_SEEN_HISTORY);
+      seenHistorySet = new Set(seenHistoryList);
+    }
+  } catch (e) {
+    console.warn('[Art] Could not read seen history:', e);
+  }
+}
+
+function recordSeenArtwork(id) {
+  if (!id) return;
+  if (seenHistorySet.has(id)) {
+    seenHistoryList = seenHistoryList.filter((item) => item !== id);
+  }
+  seenHistoryList.push(id);
+  if (seenHistoryList.length > MAX_SEEN_HISTORY) {
+    seenHistoryList = seenHistoryList.slice(-MAX_SEEN_HISTORY);
+  }
+  seenHistorySet = new Set(seenHistoryList);
+  try {
+    localStorage.setItem(SEEN_HISTORY_KEY, JSON.stringify(seenHistoryList));
+  } catch (_) {
+    // Ignore storage quota / private mode restrictions
+  }
+}
+
+function hasRecentlySeen(id) {
+  return Boolean(id && seenHistorySet.has(id));
+}
+
+/**
+ * Multi-Source Stratified Artwork Ingestion & Dual-Buffer Engine
+ */
+const GENRE_BUCKETS = ['museum', 'street', 'cosmos', 'photography'];
+const genrePools = {
+  museum: [],
+  street: [],
+  cosmos: [],
+  photography: [],
+};
+const queuedIds = new Set();
+const usedPages = {
+  aic: new Set(),
+  cma: new Set(),
+  loc: new Set(),
+  nasa: new Set(),
+};
+
+let artworkQueue = [];
 let currentQueueIndex = 0;
 let activeLayer = 'a'; // Alternates between 'a' and 'b'
 let isTransitioning = false;
+let isReplenishing = false;
+let hasBootAutoAdvanced = false;
+let bootUpgradeTimer = null;
 let rotationTimer = null;
 const ROTATION_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes per slide
+const BOOT_UPGRADE_DELAY_MS = 6000; // Auto-advance from starter to fresh remote art after 6s
+const REPLENISH_THRESHOLD = 14; // Fetch more deep catalog pages when < 14 slides remain
 
 /**
  * Fisher-Yates Shuffle
@@ -342,9 +443,29 @@ function shuffleArray(array) {
 }
 
 /**
+ * Pick an unused random integer in [minVal, maxVal] for deep API paging
+ */
+function pickUniqueRandomPage(bucketKey, minVal, maxVal) {
+  const used = usedPages[bucketKey];
+  if (used.size >= (maxVal - minVal + 1) * 0.8) {
+    used.clear();
+  }
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const candidate = Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
+    if (!used.has(candidate)) {
+      used.add(candidate);
+      return candidate;
+    }
+  }
+  const fallback = Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
+  used.add(fallback);
+  return fallback;
+}
+
+/**
  * Fetch wrapper with strict AbortController timeout so slow APIs never stall boot
  */
-async function fetchWithTimeout(url, options = {}, timeoutMs = 4500) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -362,7 +483,9 @@ async function loadLocalManifest() {
     const res = await fetchWithTimeout('/local_art_manifest.json', { cache: 'no-store' }, 3000);
     if (!res.ok) throw new Error('Local manifest not found');
     const data = await res.json();
-    return data;
+    return Array.isArray(data)
+      ? data.map((item) => ({ ...item, genre: item.genre || 'museum' }))
+      : [];
   } catch (e) {
     console.warn('[Art] Local manifest load failed:', e);
     return [];
@@ -370,49 +493,53 @@ async function loadLocalManifest() {
 }
 
 /**
- * Ingestion: Art Institute of Chicago (AIC) - Landscape Filtered
+ * Ingestion: Art Institute of Chicago (AIC) - Deep Landscape Filtered
  */
 async function fetchAICArtworks() {
-  try {
-    const page = Math.floor(Math.random() * 8) + 1;
-    const url = `https://api.artic.edu/api/v1/artworks?page=${page}&limit=40&fields=id,title,artist_title,date_display,image_id,thumbnail`;
-    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 4500);
-    if (!res.ok) throw new Error(`AIC status: ${res.status}`);
-    const json = await res.json();
-    const items = (json.data || [])
-      .filter((d) => {
-        if (!d.image_id || !d.title || !d.thumbnail?.width || !d.thumbnail?.height) return false;
-        const ratio = d.thumbnail.width / d.thumbnail.height;
-        return ratio >= MIN_LANDSCAPE_RATIO;
-      })
-      .map((d) => {
-        const targetWidth = d.thumbnail.width >= 1200 ? 1200 : 843;
-        return {
-          id: `aic-${d.id}`,
-          title: d.title || 'Untitled',
-          artist: d.artist_title || 'Unknown Artist',
-          year: d.date_display || '',
-          source: 'Art Institute of Chicago',
-          sourceIcon: '🏛️',
-          aspectRatio: d.thumbnail.width / d.thumbnail.height,
-          imageUrl: `https://www.artic.edu/iiif/2/${d.image_id}/full/${targetWidth},/0/default.jpg`,
-        };
-      });
-    return items;
-  } catch (e) {
-    console.warn('[Art] AIC fetch failed:', e);
-    return [];
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const page = pickUniqueRandomPage('aic', 1, 350);
+      const url = `https://api.artic.edu/api/v1/artworks?page=${page}&limit=40&fields=id,title,artist_title,date_display,image_id,thumbnail`;
+      const res = await fetchWithTimeout(url, { cache: 'no-store' }, 5000);
+      if (!res.ok) throw new Error(`AIC status: ${res.status}`);
+      const json = await res.json();
+      const items = (json.data || [])
+        .filter((d) => {
+          if (!d.image_id || !d.title || !d.thumbnail?.width || !d.thumbnail?.height) return false;
+          const ratio = d.thumbnail.width / d.thumbnail.height;
+          return ratio >= MIN_LANDSCAPE_RATIO;
+        })
+        .map((d) => {
+          const targetWidth = d.thumbnail.width >= 1200 ? 1200 : 843;
+          return {
+            id: `aic-${d.id}`,
+            title: d.title || 'Untitled',
+            artist: d.artist_title || 'Unknown Artist',
+            year: d.date_display || '',
+            source: 'Art Institute of Chicago',
+            sourceIcon: '🏛️',
+            genre: 'museum',
+            aspectRatio: d.thumbnail.width / d.thumbnail.height,
+            imageUrl: `https://www.artic.edu/iiif/2/${d.image_id}/full/${targetWidth},/0/default.jpg`,
+          };
+        });
+      if (items.length > 0) return items;
+    } catch (e) {
+      console.warn('[Art] AIC fetch failed:', e);
+      return [];
+    }
   }
+  return [];
 }
 
 /**
- * Ingestion: Cleveland Museum of Art (CMA) - Landscape Filtered
+ * Ingestion: Cleveland Museum of Art (CMA) - Deep CC0 Landscape Filtered
  */
 async function fetchCMAArtworks() {
   try {
-    const skip = Math.floor(Math.random() * 40);
-    const url = `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&limit=40&skip=${skip}`;
-    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 4500);
+    const skip = pickUniqueRandomPage('cma', 0, 2400);
+    const url = `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&cc0=1&limit=40&skip=${skip}`;
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 5500);
     if (!res.ok) throw new Error(`CMA status: ${res.status}`);
     const json = await res.json();
     const items = (json.data || [])
@@ -435,6 +562,7 @@ async function fetchCMAArtworks() {
           year: d.creation_date || '',
           source: 'Cleveland Museum of Art',
           sourceIcon: '🏛️',
+          genre: 'museum',
           aspectRatio: w / h,
           imageUrl: d.images.web.url,
         };
@@ -447,58 +575,45 @@ async function fetchCMAArtworks() {
 }
 
 /**
- * Ingestion: Picsum Photos (Curated Unsplash Fine Art Photography - Natural Landscapes Only)
- */
-async function fetchPicsumPhotography() {
-  try {
-    const page = Math.floor(Math.random() * 8) + 1;
-    const url = `https://picsum.photos/v2/list?page=${page}&limit=35`;
-    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 3000);
-    if (!res.ok) throw new Error(`Picsum status: ${res.status}`);
-    const list = await res.json();
-    const candidates = list
-      .filter((d) => d.width && d.height && d.width / d.height >= MIN_LANDSCAPE_RATIO)
-      .map((d) => ({
-        id: `picsum-${d.id}`,
-        title: 'Curated Photography',
-        artist: d.author || 'Featured Photographer',
-        year: '',
-        source: 'Curated Fine Photography',
-        sourceIcon: '📷',
-        aspectRatio: 16 / 9,
-        imageUrl: `https://picsum.photos/id/${d.id}/1600/900.jpg`,
-      }));
-
-    if (candidates.length === 0) return [];
-
-    // Probe image CDN responsiveness before queuing to avoid dead/522 hosts stalling rotation
-    try {
-      await preloadImage(candidates[0].imageUrl, 2500);
-      return candidates;
-    } catch (probeErr) {
-      console.warn('[Art] Picsum image CDN unhealthy/timed out, skipping batch:', probeErr.message);
-      return [];
-    }
-  } catch (e) {
-    console.warn('[Art] Picsum photography fetch failed:', e);
-    return [];
-  }
-}
-
-/**
- * Ingestion: NASA Deep Space Imagery
+ * Ingestion: NASA Cosmic & Earth Library (Deep Query + Random Page Sampling)
  */
 async function fetchNASAPhotography() {
+  const topics = [
+    'nebula',
+    'galaxy',
+    'hubble',
+    'webb',
+    'aurora',
+    'saturn',
+    'jupiter',
+    'mars',
+    'earth from space',
+    'milky way',
+    'supernova',
+    'apollo',
+    'cassini',
+    'exoplanet',
+    'solar flare',
+    'carina',
+    'orion',
+    'andromeda',
+    'lunar',
+    'eclipse',
+  ];
+
   try {
-    const queries = ['nebula', 'galaxy', 'hubble', 'webb'];
-    const q = queries[Math.floor(Math.random() * queries.length)];
-    const url = `https://images-api.nasa.gov/search?q=${q}&media_type=image`;
-    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 4500);
+    const q = topics[Math.floor(Math.random() * topics.length)];
+    const page = pickUniqueRandomPage('nasa', 1, 4);
+    const url = `https://images-api.nasa.gov/search?q=${encodeURIComponent(q)}&media_type=image&page=${page}`;
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 5000);
     if (!res.ok) throw new Error(`NASA status: ${res.status}`);
     const json = await res.json();
-    const items = (json.collection?.items || [])
-      .filter((it) => it.links && it.links[0] && it.links[0].href && it.data && it.data[0])
-      .slice(0, 15)
+    const candidates = (json.collection?.items || []).filter(
+      (it) => it.links?.[0]?.href && /\.(jpe?g|png)/i.test(it.links[0].href) && it.data?.[0]
+    );
+
+    const items = shuffleArray(candidates)
+      .slice(0, 20)
       .map((it) => {
         const d = it.data[0];
         return {
@@ -508,6 +623,7 @@ async function fetchNASAPhotography() {
           year: d.date_created ? d.date_created.substring(0, 4) : '',
           source: 'NASA Cosmic Library',
           sourceIcon: '🔭',
+          genre: 'cosmos',
           imageUrl: it.links[0].href,
         };
       });
@@ -547,7 +663,98 @@ function cleanWikiTitle(rawTitle, fallbackLabel) {
 }
 
 /**
- * Ingestion: Wikimedia Commons (Street Art, Murals, Graffiti & Contemporary Public Art)
+ * Generate random timestamp window for deep Wikimedia Commons category exploration
+ */
+function getRandomWikiStartIso() {
+  const year = 2013 + Math.floor(Math.random() * 13); // 2013..2025
+  const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+  const day = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0');
+  return `${year}-${month}-${day}T00:00:00Z`;
+}
+
+/**
+ * Shared Wikimedia Commons Category File Fetcher (Deep Timestamp Sampling + Plain Fallback)
+ */
+async function fetchWikimediaCategoryFiles(cat, sourceLabel, genre, sourceIcon) {
+  const buildUrl = (useTimestampWindow) => {
+    const base =
+      `https://commons.wikimedia.org/w/api.php?action=query&generator=categorymembers` +
+      `&gcmtitle=${encodeURIComponent(cat.name)}&gcmtype=file&gcmnamespace=6&gcmlimit=25` +
+      `&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1600&format=json&origin=*`;
+    if (!useTimestampWindow) return base;
+    const dir = Math.random() < 0.5 ? 'ascending' : 'descending';
+    return `${base}&gcmsort=timestamp&gcmdir=${dir}&gcmstart=${encodeURIComponent(getRandomWikiStartIso())}`;
+  };
+
+  const parseResponse = (json) => {
+    const pages = Object.values(json.query?.pages || {});
+    return pages
+      .filter((p) => {
+        const ii = p.imageinfo?.[0];
+        if (!ii || !ii.thumburl || !ii.mime?.startsWith('image/') || ii.mime === 'image/svg+xml') {
+          return false;
+        }
+        const w = ii.thumbwidth || ii.width || 0;
+        const h = ii.thumbheight || ii.height || 0;
+        return w >= MIN_TV_IMAGE_WIDTH && h > 0 && w / h >= MIN_LANDSCAPE_RATIO;
+      })
+      .map((p) => {
+        const ii = p.imageinfo[0];
+        const meta = ii.extmetadata || {};
+        const w = ii.thumbwidth || ii.width;
+        const h = ii.thumbheight || ii.height;
+
+        const rawTitle = meta.ObjectName?.value || p.title;
+        const title = cleanWikiTitle(rawTitle, cat.label);
+
+        let artist = stripHtml(meta.Artist?.value || '')
+          .replace(/^User:/i, '')
+          .replace(/\s*\([^)]*\)\s*/g, ' ')
+          .trim();
+        if (!artist || /^unknown$/i.test(artist) || artist.length > 60) {
+          artist = 'Unknown Artist';
+        }
+
+        const rawDate = stripHtml(meta.DateTimeOriginal?.value || '');
+        const yearMatch = rawDate.match(/\b(19|20)\d{2}\b/);
+        const year = yearMatch ? yearMatch[0] : '';
+
+        return {
+          id: `wiki-${p.pageid}`,
+          title,
+          artist,
+          year,
+          source: sourceLabel,
+          sourceIcon,
+          genre,
+          aspectRatio: w / h,
+          imageUrl: ii.thumburl,
+        };
+      });
+  };
+
+  try {
+    const res = await fetchWithTimeout(buildUrl(true), { cache: 'no-store' }, 5000);
+    if (!res.ok) throw new Error(`Wikimedia status: ${res.status}`);
+    let items = parseResponse(await res.json());
+
+    // If a random timestamp slice happens to be sparse, fall back to standard category listing
+    if (items.length < 4) {
+      const fallbackRes = await fetchWithTimeout(buildUrl(false), { cache: 'no-store' }, 4500);
+      if (fallbackRes.ok) {
+        const fallbackItems = parseResponse(await fallbackRes.json());
+        if (fallbackItems.length > items.length) items = fallbackItems;
+      }
+    }
+    return items;
+  } catch (e) {
+    console.warn(`[Art] Wikimedia fetch failed (${cat.name}):`, e);
+    return [];
+  }
+}
+
+/**
+ * Ingestion: Wikimedia Commons Street Art, Murals, Graffiti & Contemporary Art
  */
 async function fetchWikimediaStreetArt() {
   const categories = [
@@ -562,70 +769,87 @@ async function fetchWikimediaStreetArt() {
     { name: 'Category:Contemporary_art', label: 'Contemporary Art' },
   ];
 
-  // Pick 2 distinct categories per boot for rich variety
   const picked = shuffleArray(categories).slice(0, 2);
+  const results = await Promise.all(
+    picked.map((cat) => fetchWikimediaCategoryFiles(cat, 'Wikimedia Commons', 'street', '🎨'))
+  );
+  return results.flat();
+}
 
+/**
+ * Ingestion: Wikimedia Commons Featured Photography (Landscapes, Nature, Architecture)
+ */
+async function fetchWikimediaPhotography() {
+  const categories = [
+    { name: 'Category:Featured_pictures_of_landscapes', label: 'Featured Landscape' },
+    { name: 'Category:Featured_pictures_of_mountains', label: 'Alpine Panorama' },
+    { name: 'Category:Featured_pictures_of_bodies_of_water', label: 'Coastal & Water Study' },
+    { name: 'Category:Featured_pictures_of_architecture', label: 'Architectural Study' },
+    { name: 'Category:Featured_pictures_of_trees', label: 'Forest & Botanical Study' },
+  ];
+
+  const picked = shuffleArray(categories).slice(0, 2);
+  const results = await Promise.all(
+    picked.map((cat) =>
+      fetchWikimediaCategoryFiles(cat, 'Wikimedia Featured Photography', 'photography', '📷')
+    )
+  );
+  return results.flat();
+}
+
+/**
+ * Ingestion: Library of Congress (Carol M. Highsmith Contemporary American Photography)
+ */
+async function fetchLOCPhotography() {
   try {
-    const results = await Promise.all(
-      picked.map(async (cat) => {
-        const url =
-          `https://commons.wikimedia.org/w/api.php?action=query&generator=categorymembers` +
-          `&gcmtitle=${encodeURIComponent(cat.name)}&gcmtype=file&gcmlimit=25` +
-          `&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1600&format=json&origin=*`;
+    const page = pickUniqueRandomPage('loc', 1, 1500);
+    const url = `https://www.loc.gov/collections/carol-m-highsmith/?fo=json&c=30&sp=${page}`;
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 5500);
+    if (!res.ok) throw new Error(`LOC status: ${res.status}`);
+    const json = await res.json();
 
-        const res = await fetchWithTimeout(url, { cache: 'no-store' }, 4500);
-        if (!res.ok) throw new Error(`Wikimedia status: ${res.status}`);
-        const json = await res.json();
-        const pages = Object.values(json.query?.pages || {});
-
-        return pages
-          .filter((p) => {
-            const ii = p.imageinfo?.[0];
-            if (!ii || !ii.thumburl || !ii.mime?.startsWith('image/') || ii.mime === 'image/svg+xml') {
-              return false;
-            }
-            const w = ii.thumbwidth || ii.width || 0;
-            const h = ii.thumbheight || ii.height || 0;
-            return w >= MIN_TV_IMAGE_WIDTH && h > 0 && w / h >= MIN_LANDSCAPE_RATIO;
-          })
-          .map((p) => {
-            const ii = p.imageinfo[0];
-            const meta = ii.extmetadata || {};
-            const w = ii.thumbwidth || ii.width;
-            const h = ii.thumbheight || ii.height;
-
-            const rawTitle = meta.ObjectName?.value || p.title;
-            const title = cleanWikiTitle(rawTitle, cat.label);
-
-            let artist = stripHtml(meta.Artist?.value || '')
-              .replace(/^User:/i, '')
-              .replace(/\s*\([^)]*\)\s*/g, ' ')
-              .trim();
-            if (!artist || /^unknown$/i.test(artist) || artist.length > 60) {
-              artist = 'Unknown Artist';
-            }
-
-            const rawDate = stripHtml(meta.DateTimeOriginal?.value || '');
-            const yearMatch = rawDate.match(/\b(19|20)\d{2}\b/);
-            const year = yearMatch ? yearMatch[0] : '';
-
+    return (json.results || [])
+      .map((r) => {
+        const variants = (r.image_url || [])
+          .map((rawUrl) => {
+            const match = rawUrl.match(/#h=(\d+)&w=(\d+)/);
+            if (!match) return null;
             return {
-              id: `wiki-${p.pageid}`,
-              title,
-              artist,
-              year,
-              source: 'Wikimedia Commons',
-              sourceIcon: '🎨',
-              aspectRatio: w / h,
-              imageUrl: ii.thumburl,
+              url: rawUrl.split('#')[0],
+              h: Number(match[1]),
+              w: Number(match[2]),
             };
-          });
-      })
-    );
+          })
+          .filter(Boolean);
 
-    return results.flat();
+        const best =
+          variants.find((v) => v.w >= 950 && v.w <= 2200) ||
+          variants[variants.length - 1];
+
+        if (!best || best.w < MIN_TV_IMAGE_WIDTH || best.h <= 0) return null;
+        const ratio = best.w / best.h;
+        if (ratio < MIN_LANDSCAPE_RATIO) return null;
+
+        const cleanTitle = String(r.title || 'American Landscape')
+          .replace(/[\s,./]+$/, '')
+          .trim();
+        const yearMatch = String(r.date || '').match(/\b(19|20)\d{2}\b/);
+
+        return {
+          id: `loc-${r.id ? r.id.split('/').filter(Boolean).pop() : Math.random()}`,
+          title: cleanTitle,
+          artist: 'Carol M. Highsmith',
+          year: yearMatch ? yearMatch[0] : '',
+          source: 'Library of Congress',
+          sourceIcon: '📷',
+          genre: 'photography',
+          aspectRatio: ratio,
+          imageUrl: best.url,
+        };
+      })
+      .filter(Boolean);
   } catch (e) {
-    console.warn('[Art] Wikimedia Commons fetch failed:', e);
+    console.warn('[Art] Library of Congress fetch failed:', e);
     return [];
   }
 }
@@ -725,10 +949,11 @@ function preloadImage(url, timeoutMs = 5000) {
 }
 
 /**
- * Commit artwork to target layer, cross-fade buffers, and update caption
+ * Commit artwork to target layer, cross-fade buffers, update caption, and record seen ID
  */
 function commitLayerTransition(targetLayerKey, artwork, ratio) {
   applyArtworkToLayer(targetLayerKey, artwork, ratio);
+  recordSeenArtwork(artwork.id);
 
   if (targetLayerKey === 'a') {
     if (layerAEl) {
@@ -768,17 +993,23 @@ function commitLayerTransition(targetLayerKey, artwork, ratio) {
 }
 
 /**
- * Dual-Buffer Cross-Fade Transition
+ * Dual-Buffer Cross-Fade Transition with Memory Pruning & Rolling Replenishment
  */
 async function transitionToNextArtwork(skipCount = 0) {
   if (isTransitioning || artworkQueue.length === 0) return;
+
+  hasBootAutoAdvanced = true;
+  if (bootUpgradeTimer) {
+    clearTimeout(bootUpgradeTimer);
+    bootUpgradeTimer = null;
+  }
 
   const targetLayerKey = activeLayer === 'a' ? 'b' : 'a';
 
   if (skipCount > 12) {
     console.warn('[Art] Too many consecutive skips, applying verified baseline fallback');
     isTransitioning = true;
-    const fallback = BASELINE_MASTERWORKS[Math.floor(Math.random() * BASELINE_MASTERWORKS.length)];
+    const fallback = pickRandomStarter();
     let fallbackRatio = fallback.aspectRatio || 1.33;
     try {
       const result = await preloadImage(fallback.imageUrl, 5000);
@@ -787,10 +1018,29 @@ async function transitionToNextArtwork(skipCount = 0) {
       // Proceed with fallback asset directly so screen never remains blank
     }
     commitLayerTransition(targetLayerKey, fallback, fallbackRatio);
+    replenishArtworkQueue();
     return;
   }
 
   isTransitioning = true;
+
+  // Prune old played slides to keep memory flat during 24/7 playback
+  if (currentQueueIndex > 20) {
+    const pruneCount = currentQueueIndex - 10;
+    artworkQueue.splice(0, pruneCount);
+    currentQueueIndex -= pruneCount;
+  }
+
+  // If user clicks fast before batch flush completes, deal any waiting pool items immediately
+  if (artworkQueue.length - 1 - currentQueueIndex < 2) {
+    dealBalancedDeckFromPools();
+  }
+
+  // Trigger rolling background refill whenever < 14 unseen slides remain
+  const remainingCount = artworkQueue.length - 1 - currentQueueIndex;
+  if (remainingCount < REPLENISH_THRESHOLD) {
+    replenishArtworkQueue();
+  }
 
   // Advance queue index
   currentQueueIndex = (currentQueueIndex + 1) % artworkQueue.length;
@@ -804,7 +1054,6 @@ async function transitionToNextArtwork(skipCount = 0) {
   } catch (err) {
     console.warn('[Art] Skipping unsuitable artwork:', nextArtwork.title, err.message);
     isTransitioning = false;
-    // Advance to next
     transitionToNextArtwork(skipCount + 1);
     return;
   }
@@ -822,31 +1071,169 @@ function startRotationCycle() {
   }, ROTATION_INTERVAL_MS);
 }
 
+let deckDealTimer = null;
+let hasLiveItemsDealt = false;
+
 /**
- * Progressively merge newly resolved collections into the live queue without blocking boot
+ * Stratified Round-Robin + Anti-Streak Deck Builder
+ * Ensures even genre rotation (Museum -> Street -> Space -> Photography) without back-to-back source or artist repeats.
  */
-function mergeIntoArtworkQueue(newItems) {
-  if (!Array.isArray(newItems) || newItems.length === 0) return;
-  const existingIds = new Set(artworkQueue.map((item) => item.id));
-  const freshItems = newItems.filter((item) => item && item.imageUrl && !existingIds.has(item.id));
-  if (freshItems.length === 0) return;
+function dealBalancedDeckFromPools() {
+  if (deckDealTimer) {
+    clearTimeout(deckDealTimer);
+    deckDealTimer = null;
+  }
 
-  const currentItem = artworkQueue[currentQueueIndex];
-  const before = artworkQueue.slice(0, currentQueueIndex + 1);
-  const remaining = artworkQueue.slice(currentQueueIndex + 1);
-  const mergedTail = shuffleArray([...remaining, ...freshItems]);
+  GENRE_BUCKETS.forEach((bucket) => {
+    if (genrePools[bucket].length > 1) {
+      genrePools[bucket] = shuffleArray(genrePools[bucket]);
+    }
+  });
 
-  artworkQueue = currentItem ? [...before, ...mergedTail] : shuffleArray(freshItems);
-  console.log(`[Art Engine] Merged ${freshItems.length} pieces. Total queue: ${artworkQueue.length}`);
+  const dealt = [];
+  const lookbackStart = Math.max(0, artworkQueue.length - 6);
+  const recentTail = artworkQueue.slice(lookbackStart);
+  let lastSource = recentTail.length > 0 ? recentTail[recentTail.length - 1].source : null;
+  const recentArtists = recentTail
+    .map((item) => item.artist)
+    .filter((a) => a && a !== 'Unknown Artist');
+
+  const pickBestIndex = (pool) => {
+    let idx = pool.findIndex(
+      (item) =>
+        item.source !== lastSource &&
+        (item.artist === 'Unknown Artist' || !recentArtists.includes(item.artist))
+    );
+    if (idx !== -1) return idx;
+    idx = pool.findIndex((item) => item.source !== lastSource);
+    return idx !== -1 ? idx : 0;
+  };
+
+  while (GENRE_BUCKETS.some((b) => genrePools[b].length > 0)) {
+    const cycleOrder = shuffleArray(GENRE_BUCKETS);
+    for (const bucket of cycleOrder) {
+      const pool = genrePools[bucket];
+      if (pool.length === 0) continue;
+
+      const idx = pickBestIndex(pool);
+      const [chosen] = pool.splice(idx, 1);
+      dealt.push(chosen);
+      lastSource = chosen.source;
+
+      if (chosen.artist && chosen.artist !== 'Unknown Artist') {
+        recentArtists.push(chosen.artist);
+        if (recentArtists.length > 6) recentArtists.shift();
+      }
+    }
+  }
+
+  if (dealt.length > 0) {
+    artworkQueue.push(...dealt);
+    console.log(`[Art Engine] Dealt ${dealt.length} balanced pieces. Queue depth: ${artworkQueue.length}`);
+
+    if (
+      hasLiveItemsDealt &&
+      !hasBootAutoAdvanced &&
+      !bootUpgradeTimer &&
+      currentQueueIndex === 0 &&
+      artworkQueue.length > 1
+    ) {
+      bootUpgradeTimer = setTimeout(() => {
+        bootUpgradeTimer = null;
+        if (!hasBootAutoAdvanced && currentQueueIndex === 0 && artworkQueue.length > 1) {
+          hasBootAutoAdvanced = true;
+          transitionToNextArtwork();
+          startRotationCycle();
+        }
+      }, BOOT_UPGRADE_DELAY_MS);
+    }
+  }
+  return dealt.length;
 }
 
 /**
- * Populate In-Memory Artwork Queue (Non-Blocking Progressive Ingestion)
+ * Ingest new items into genre buckets, skipping duplicates & recently seen IDs
+ */
+function ingestIntoBalancedDeck(newItems, isLiveRemote = false) {
+  if (!Array.isArray(newItems) || newItems.length === 0) return;
+
+  let addedCount = 0;
+  newItems.forEach((item) => {
+    if (!item || !item.id || !item.imageUrl) return;
+    if (queuedIds.has(item.id) || hasRecentlySeen(item.id)) return;
+
+    const bucket = GENRE_BUCKETS.includes(item.genre) ? item.genre : 'museum';
+    queuedIds.add(item.id);
+    genrePools[bucket].push(item);
+    addedCount++;
+  });
+
+  if (addedCount === 0) return;
+  if (isLiveRemote) hasLiveItemsDealt = true;
+
+  // Batch concurrent arrivals for 1.2s so multiple genres interleave cleanly side-by-side
+  const populatedBuckets = GENRE_BUCKETS.filter((b) => genrePools[b].length > 0).length;
+  if (populatedBuckets === GENRE_BUCKETS.length) {
+    dealBalancedDeckFromPools();
+  } else if (!deckDealTimer) {
+    deckDealTimer = setTimeout(() => {
+      dealBalancedDeckFromPools();
+    }, 1200);
+  }
+}
+
+/**
+ * Pick a randomized fast starter artwork, preferring unseen items
+ */
+function pickRandomStarter() {
+  const unseen = BASELINE_MASTERWORKS.filter((item) => !hasRecentlySeen(item.id));
+  const pool = unseen.length > 0 ? unseen : BASELINE_MASTERWORKS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
+ * Fetch one deep randomized batch from all reliable remote collections
+ */
+async function replenishArtworkQueue() {
+  if (isReplenishing) return;
+  isReplenishing = true;
+
+  const remoteFetchers = [
+    fetchAICArtworks(),
+    fetchCMAArtworks(),
+    fetchNASAPhotography(),
+    fetchWikimediaStreetArt(),
+    fetchWikimediaPhotography(),
+    fetchLOCPhotography(),
+  ];
+
+  try {
+    await Promise.allSettled(
+      remoteFetchers.map((p) =>
+        p
+          .then((items) => ingestIntoBalancedDeck(items, true))
+          .catch((err) => console.warn('[Art] Remote source warning:', err))
+      )
+    );
+  } finally {
+    dealBalancedDeckFromPools();
+    isReplenishing = false;
+  }
+}
+
+/**
+ * Populate Artwork Queue (Randomized Boot Starter + Auto-Advance + Balanced Endless Deck)
  */
 function initializeArtworkEngine() {
-  // Synchronously render the initial baseline piece on layer A immediately
-  const initialArtwork = artworkQueue[0];
-  applyArtworkToLayer('a', initialArtwork, initialArtwork?.aspectRatio || 1.25);
+  loadSeenHistory();
+
+  // Synchronously render a randomized fast starter piece on layer A immediately
+  const initialArtwork = pickRandomStarter();
+  artworkQueue = [initialArtwork];
+  queuedIds.add(initialArtwork.id);
+  recordSeenArtwork(initialArtwork.id);
+
+  applyArtworkToLayer('a', initialArtwork, initialArtwork?.aspectRatio || 1.33);
   updateArtworkHUD(initialArtwork);
 
   // Guard against boot image failure so stage never sits black
@@ -866,21 +1253,12 @@ function initializeArtworkEngine() {
   // Start rotation immediately; never block on slow remote sources
   startRotationCycle();
 
-  // Concurrently fetch each collection and merge progressively as each resolves
-  const sources = [
-    loadLocalManifest(),
-    fetchAICArtworks(),
-    fetchCMAArtworks(),
-    fetchNASAPhotography(),
-    fetchWikimediaStreetArt(),
-    fetchPicsumPhotography(),
-  ];
+  // Seed local manifest silently if unseen, then trigger live deep-catalog round
+  loadLocalManifest()
+    .then((items) => ingestIntoBalancedDeck(items, false))
+    .catch(() => {});
 
-  sources.forEach((promise) => {
-    promise
-      .then((items) => mergeIntoArtworkQueue(items))
-      .catch((err) => console.warn('[Art] Collection warning:', err));
-  });
+  replenishArtworkQueue();
 }
 
 /**

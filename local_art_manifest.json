@@ -6,8 +6,31 @@
     "year": "1906",
     "source": "Art Institute of Chicago",
     "sourceIcon": "🏛️",
+    "genre": "museum",
     "aspectRatio": 1.25,
     "imageUrl": "https://www.artic.edu/iiif/2/3c27b499-af56-f0d5-93b5-a7f2f1ad5813/full/1200,/0/default.jpg"
+  },
+  {
+    "id": "aic-nighthawks",
+    "title": "Nighthawks",
+    "artist": "Edward Hopper",
+    "year": "1942",
+    "source": "Art Institute of Chicago",
+    "sourceIcon": "🏛️",
+    "genre": "museum",
+    "aspectRatio": 1.83,
+    "imageUrl": "https://www.artic.edu/iiif/2/831a05de-d3f6-f4fa-a460-23008dd58dda/full/1200,/0/default.jpg"
+  },
+  {
+    "id": "aic-grande-jatte",
+    "title": "A Sunday on La Grande Jatte — 1884",
+    "artist": "Georges Seurat",
+    "year": "1884–86",
+    "source": "Art Institute of Chicago",
+    "sourceIcon": "🏛️",
+    "genre": "museum",
+    "aspectRatio": 1.49,
+    "imageUrl": "https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f9981972eb/full/1200,/0/default.jpg"
   },
   {
     "id": "aic-bedroom",
@@ -16,6 +39,7 @@
     "year": "1889",
     "source": "Art Institute of Chicago",
     "sourceIcon": "🏛️",
+    "genre": "museum",
     "aspectRatio": 1.25,
     "imageUrl": "https://www.artic.edu/iiif/2/6644829f-f292-c5c4-a73c-0356a6fdbf0d/full/1200,/0/default.jpg"
   },
@@ -26,6 +50,7 @@
     "year": "1891",
     "source": "Art Institute of Chicago",
     "sourceIcon": "🏛️",
+    "genre": "museum",
     "aspectRatio": 1.44,
     "imageUrl": "https://www.artic.edu/iiif/2/a38e2828-ec6f-ece1-a30f-70243449197b/full/1200,/0/default.jpg"
   },
@@ -36,6 +61,7 @@
     "year": "1877",
     "source": "Art Institute of Chicago",
     "sourceIcon": "🏛️",
+    "genre": "museum",
     "aspectRatio": 1.35,
     "imageUrl": "https://www.artic.edu/iiif/2/0f1cc0e0-e42e-be16-3f71-2022da38cb93/full/1200,/0/default.jpg"
   },
@@ -46,7 +72,19 @@
     "year": "2022",
     "source": "NASA Cosmic Library",
     "sourceIcon": "🔭",
+    "genre": "cosmos",
     "aspectRatio": 1.73,
     "imageUrl": "https://images-assets.nasa.gov/image/PIA14417/PIA14417~medium.jpg"
+  },
+  {
+    "id": "nasa-lagoon",
+    "title": "Hubble Reveals Heart of Lagoon Nebula",
+    "artist": "NASA / ESA / STScI",
+    "year": "2017",
+    "source": "NASA Cosmic Library",
+    "sourceIcon": "🔭",
+    "genre": "cosmos",
+    "aspectRatio": 1.5,
+    "imageUrl": "https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001955/GSFC_20171208_Archive_e001955~medium.jpg"
   }
 ]
