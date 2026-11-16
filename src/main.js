@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11162026.1710';
+export const APP_BUILD_VERSION = 'v1.11162026.1716';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -499,8 +499,8 @@ async function fetchAICArtworks() {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const page = pickUniqueRandomPage('aic', 1, 350);
-      const url = `https://api.artic.edu/api/v1/artworks?page=${page}&limit=40&fields=id,title,artist_title,date_display,image_id,thumbnail`;
-      const res = await fetchWithTimeout(url, { cache: 'no-store' }, 5000);
+      const url = `https://api.artic.edu/api/v1/artworks?page=${page}&limit=25&fields=id,title,artist_title,date_display,image_id,thumbnail`;
+      const res = await fetchWithTimeout(url, { cache: 'no-store' }, 6500);
       if (!res.ok) throw new Error(`AIC status: ${res.status}`);
       const json = await res.json();
       const items = (json.data || [])
@@ -538,8 +538,8 @@ async function fetchAICArtworks() {
 async function fetchCMAArtworks() {
   try {
     const skip = pickUniqueRandomPage('cma', 0, 2400);
-    const url = `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&cc0=1&limit=40&skip=${skip}`;
-    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 5500);
+    const url = `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&cc0=1&limit=20&skip=${skip}`;
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 7000);
     if (!res.ok) throw new Error(`CMA status: ${res.status}`);
     const json = await res.json();
     const items = (json.data || [])
@@ -803,8 +803,8 @@ async function fetchWikimediaPhotography() {
 async function fetchLOCPhotography() {
   try {
     const page = pickUniqueRandomPage('loc', 1, 1500);
-    const url = `https://www.loc.gov/collections/carol-m-highsmith/?fo=json&c=30&sp=${page}`;
-    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 5500);
+    const url = `https://www.loc.gov/collections/carol-m-highsmith/?fo=json&c=15&sp=${page}`;
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 7000);
     if (!res.ok) throw new Error(`LOC status: ${res.status}`);
     const json = await res.json();
 
@@ -1074,14 +1074,29 @@ function startRotationCycle() {
 let deckDealTimer = null;
 let hasLiveItemsDealt = false;
 
+function getProviderFamily(source) {
+  if (!source) return '';
+  if (source.startsWith('Wikimedia')) return 'wikimedia';
+  return source;
+}
+
 /**
  * Stratified Round-Robin + Anti-Streak Deck Builder
- * Ensures even genre rotation (Museum -> Street -> Space -> Photography) without back-to-back source or artist repeats.
+ * Re-interleaves the entire unplayed tail whenever new sources arrive so fast providers never cluster at the front.
  */
 function dealBalancedDeckFromPools() {
   if (deckDealTimer) {
     clearTimeout(deckDealTimer);
     deckDealTimer = null;
+  }
+
+  // Pull any existing unplayed items back into genrePools so late-arriving sources weave into the front too
+  if (artworkQueue.length > currentQueueIndex + 1) {
+    const unplayedTail = artworkQueue.splice(currentQueueIndex + 1);
+    unplayedTail.forEach((item) => {
+      const bucket = GENRE_BUCKETS.includes(item.genre) ? item.genre : 'museum';
+      genrePools[bucket].push(item);
+    });
   }
 
   GENRE_BUCKETS.forEach((bucket) => {
@@ -1094,6 +1109,7 @@ function dealBalancedDeckFromPools() {
   const lookbackStart = Math.max(0, artworkQueue.length - 6);
   const recentTail = artworkQueue.slice(lookbackStart);
   let lastSource = recentTail.length > 0 ? recentTail[recentTail.length - 1].source : null;
+  let lastFamily = getProviderFamily(lastSource);
   const recentArtists = recentTail
     .map((item) => item.artist)
     .filter((a) => a && a !== 'Unknown Artist');
@@ -1101,7 +1117,7 @@ function dealBalancedDeckFromPools() {
   const pickBestIndex = (pool) => {
     let idx = pool.findIndex(
       (item) =>
-        item.source !== lastSource &&
+        getProviderFamily(item.source) !== lastFamily &&
         (item.artist === 'Unknown Artist' || !recentArtists.includes(item.artist))
     );
     if (idx !== -1) return idx;
@@ -1119,6 +1135,7 @@ function dealBalancedDeckFromPools() {
       const [chosen] = pool.splice(idx, 1);
       dealt.push(chosen);
       lastSource = chosen.source;
+      lastFamily = getProviderFamily(chosen.source);
 
       if (chosen.artist && chosen.artist !== 'Unknown Artist') {
         recentArtists.push(chosen.artist);
@@ -1171,14 +1188,14 @@ function ingestIntoBalancedDeck(newItems, isLiveRemote = false) {
   if (addedCount === 0) return;
   if (isLiveRemote) hasLiveItemsDealt = true;
 
-  // Batch concurrent arrivals for 1.2s so multiple genres interleave cleanly side-by-side
+  // Wait up to 2.6s (or until all 4 genre buckets are populated) before dealing so fast & slower APIs weave evenly
   const populatedBuckets = GENRE_BUCKETS.filter((b) => genrePools[b].length > 0).length;
   if (populatedBuckets === GENRE_BUCKETS.length) {
     dealBalancedDeckFromPools();
   } else if (!deckDealTimer) {
     deckDealTimer = setTimeout(() => {
       dealBalancedDeckFromPools();
-    }, 1200);
+    }, 2600);
   }
 }
 
