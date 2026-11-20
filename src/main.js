@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11162026.1716';
+export const APP_BUILD_VERSION = 'v1.11192026.2052';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -257,11 +257,12 @@ const artSourceWrapEl = document.getElementById('hud-art-source-wrap');
 const artSourceNameEl = document.getElementById('hud-art-source-name');
 const artCaptionEl = document.getElementById('artwork-caption');
 
-// Widescreen & Landscape TV Aspect Ratio Thresholds
-const MIN_LANDSCAPE_RATIO = 1.2; // Keeps 4:3 paintings (1.33+) and widescreen; rejects portraits/squares
-const FULL_BLEED_MIN_RATIO = 1.60; // Auto-fills 16:9 screen edge-to-edge
+// TV Aspect Ratio & Resolution Thresholds (Relaxed for classic museum canvases framed by ambient halo)
+const MIN_ASPECT_RATIO = 0.78; // Allows 4:5 portraits, squares, 4:3, and widescreen; rejects skinny phone strips
+const FULL_BLEED_MIN_RATIO = 1.55; // Auto-fills 16:9 screen edge-to-edge
 const FULL_BLEED_MAX_RATIO = 2.25;
-const MIN_TV_IMAGE_WIDTH = 750;
+const MIN_TV_LONG_EDGE = 720; // Crisp TV resolution on either width or height
+const MIN_TV_SHORT_EDGE = 480;
 
 /**
  * Immediate Zero-Wait Baseline Masterworks (Diverse starter pool across art & space)
@@ -274,7 +275,7 @@ const BASELINE_MASTERWORKS = [
     year: '1942',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
-    genre: 'museum',
+    providerKey: 'aic',
     aspectRatio: 1.83,
     imageUrl: 'https://www.artic.edu/iiif/2/831a05de-d3f6-f4fa-a460-23008dd58dda/full/1200,/0/default.jpg',
   },
@@ -285,7 +286,7 @@ const BASELINE_MASTERWORKS = [
     year: '1884–86',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
-    genre: 'museum',
+    providerKey: 'aic',
     aspectRatio: 1.49,
     imageUrl: 'https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f9981972eb/full/1200,/0/default.jpg',
   },
@@ -296,7 +297,7 @@ const BASELINE_MASTERWORKS = [
     year: '1906',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
-    genre: 'museum',
+    providerKey: 'aic',
     aspectRatio: 1.25,
     imageUrl: 'https://www.artic.edu/iiif/2/3c27b499-af56-f0d5-93b5-a7f2f1ad5813/full/1200,/0/default.jpg',
   },
@@ -307,7 +308,7 @@ const BASELINE_MASTERWORKS = [
     year: '1889',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
-    genre: 'museum',
+    providerKey: 'aic',
     aspectRatio: 1.25,
     imageUrl: 'https://www.artic.edu/iiif/2/6644829f-f292-c5c4-a73c-0356a6fdbf0d/full/1200,/0/default.jpg',
   },
@@ -318,7 +319,7 @@ const BASELINE_MASTERWORKS = [
     year: '1891',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
-    genre: 'museum',
+    providerKey: 'aic',
     aspectRatio: 1.44,
     imageUrl: 'https://www.artic.edu/iiif/2/a38e2828-ec6f-ece1-a30f-70243449197b/full/1200,/0/default.jpg',
   },
@@ -329,7 +330,7 @@ const BASELINE_MASTERWORKS = [
     year: '1877',
     source: 'Art Institute of Chicago',
     sourceIcon: '🏛️',
-    genre: 'museum',
+    providerKey: 'aic',
     aspectRatio: 1.35,
     imageUrl: 'https://www.artic.edu/iiif/2/0f1cc0e0-e42e-be16-3f71-2022da38cb93/full/1200,/0/default.jpg',
   },
@@ -340,7 +341,7 @@ const BASELINE_MASTERWORKS = [
     year: '2022',
     source: 'NASA Cosmic Library',
     sourceIcon: '🔭',
-    genre: 'cosmos',
+    providerKey: 'nasa',
     aspectRatio: 1.73,
     imageUrl: 'https://images-assets.nasa.gov/image/PIA14417/PIA14417~medium.jpg',
   },
@@ -351,17 +352,17 @@ const BASELINE_MASTERWORKS = [
     year: '2017',
     source: 'NASA Cosmic Library',
     sourceIcon: '🔭',
-    genre: 'cosmos',
+    providerKey: 'nasa',
     aspectRatio: 1.5,
     imageUrl: 'https://images-assets.nasa.gov/image/GSFC_20171208_Archive_e001955/GSFC_20171208_Archive_e001955~medium.jpg',
   },
 ];
 
 /**
- * Lightweight "Recently Seen" Ring Buffer (IDs only, ~4KB max, zero image caching)
+ * Lightweight "Recently Seen" Ring Buffer (IDs only, ~6KB max, zero image caching)
  */
 const SEEN_HISTORY_KEY = 'gimme_tv_seen_ids';
-const MAX_SEEN_HISTORY = 250;
+const MAX_SEEN_HISTORY = 400;
 let seenHistoryList = [];
 let seenHistorySet = new Set();
 
@@ -401,19 +402,35 @@ function hasRecentlySeen(id) {
 }
 
 /**
- * Multi-Source Stratified Artwork Ingestion & Dual-Buffer Engine
+ * 8-Source Equal-Seat Maximum Variety Engine
+ * Strict rules:
+ * 1. Equal seat cap (MAX_ITEMS_PER_PROVIDER = 6) so fast/large APIs never flood the queue.
+ * 2. Provider-level round-robin across 8 distinct seats (Wikimedia capped to 1 of 8 seats ~12.5%).
+ * 3. Hard cooldown: never repeat a provider back-to-back (4-slide window) or an artist within 8 slides.
+ * 4. No tail dump: stops dealing once < 3 distinct providers remain, triggering an early fresh refill.
  */
-const GENRE_BUCKETS = ['museum', 'street', 'cosmos', 'photography'];
-const genrePools = {
-  museum: [],
-  street: [],
-  cosmos: [],
-  photography: [],
+const PROVIDER_KEYS = ['met', 'aic', 'cma', 'smk', 'smithsonian', 'loc', 'nasa', 'wikimedia'];
+const MAX_ITEMS_PER_PROVIDER = 6;
+const PROVIDER_COOLDOWN_WINDOW = 4;
+const ARTIST_COOLDOWN_WINDOW = 8;
+
+const providerPools = {
+  met: [],
+  aic: [],
+  cma: [],
+  smk: [],
+  smithsonian: [],
+  loc: [],
+  nasa: [],
+  wikimedia: [],
 };
 const queuedIds = new Set();
 const usedPages = {
+  met: new Set(),
   aic: new Set(),
   cma: new Set(),
+  smk: new Set(),
+  smithsonian: new Set(),
   loc: new Set(),
   nasa: new Set(),
 };
@@ -428,7 +445,7 @@ let bootUpgradeTimer = null;
 let rotationTimer = null;
 const ROTATION_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes per slide
 const BOOT_UPGRADE_DELAY_MS = 6000; // Auto-advance from starter to fresh remote art after 6s
-const REPLENISH_THRESHOLD = 14; // Fetch more deep catalog pages when < 14 slides remain
+const REPLENISH_THRESHOLD = 10; // Refill early while queue still has balanced slides
 
 /**
  * Fisher-Yates Shuffle
@@ -465,7 +482,7 @@ function pickUniqueRandomPage(bucketKey, minVal, maxVal) {
 /**
  * Fetch wrapper with strict AbortController timeout so slow APIs never stall boot
  */
-async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -476,29 +493,93 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
 }
 
 /**
- * Ingestion: Local Curated Manifest
+ * Helper to validate dimensions against our relaxed TV framing thresholds
  */
-async function loadLocalManifest() {
+function passesDimensionGate(width, height) {
+  const w = Number(width) || 0;
+  const h = Number(height) || 0;
+  if (w <= 0 || h <= 0) return false;
+  const ratio = w / h;
+  const longEdge = Math.max(w, h);
+  const shortEdge = Math.min(w, h);
+  return ratio >= MIN_ASPECT_RATIO && longEdge >= MIN_TV_LONG_EDGE && shortEdge >= MIN_TV_SHORT_EDGE;
+}
+
+/**
+ * 1. The Metropolitan Museum of Art (v1.1 Elastic Search + Object Details)
+ */
+async function fetchMetArtworks() {
+  const queries = [
+    'painting',
+    'landscape',
+    'impressionism',
+    'flowers',
+    'woodblock',
+    'sea',
+    'garden',
+    'still life',
+    'architecture',
+    'night',
+    'forest',
+    'textile',
+    'ceramic',
+    'modern',
+    'japan',
+    'european',
+  ];
+
   try {
-    const res = await fetchWithTimeout('/local_art_manifest.json', { cache: 'no-store' }, 3000);
-    if (!res.ok) throw new Error('Local manifest not found');
-    const data = await res.json();
-    return Array.isArray(data)
-      ? data.map((item) => ({ ...item, genre: item.genre || 'museum' }))
-      : [];
+    const q = queries[Math.floor(Math.random() * queries.length)];
+    const offset = pickUniqueRandomPage('met', 0, 260);
+    const searchUrl = `https://collectionapi.metmuseum.org/public/collection/v1.1/search?hasImages=true&isPublicDomain=true&q=${encodeURIComponent(q)}&offset=${offset}&limit=12`;
+    const res = await fetchWithTimeout(searchUrl, { cache: 'no-store' }, 6000);
+    if (!res.ok) throw new Error(`Met search status: ${res.status}`);
+    const json = await res.json();
+    const ids = shuffleArray(json.objectIDs || []).slice(0, 8);
+    if (ids.length === 0) return [];
+
+    const details = await Promise.allSettled(
+      ids.map(async (objectId) => {
+        const objRes = await fetchWithTimeout(
+          `https://collectionapi.metmuseum.org/public/collection/v1/objects/${objectId}`,
+          { cache: 'no-store' },
+          5000
+        );
+        if (!objRes.ok) return null;
+        const obj = await objRes.json();
+        const imageUrl = obj.primaryImageSmall || obj.primaryImage;
+        if (!imageUrl || !obj.isPublicDomain) return null;
+
+        const yearMatch = String(obj.objectDate || '').match(/\b(1[0-9]\d{2}|20\d{2})\b/);
+        return {
+          id: `met-${obj.objectID}`,
+          title: obj.title || 'Untitled',
+          artist: obj.artistDisplayName || obj.culture || 'Unknown Artist',
+          year: yearMatch ? yearMatch[0] : obj.objectDate ? String(obj.objectDate).slice(0, 20) : '',
+          source: 'The Metropolitan Museum of Art',
+          sourceIcon: '🏛️',
+          providerKey: 'met',
+          imageUrl,
+        };
+      })
+    );
+
+    return details
+      .filter((r) => r.status === 'fulfilled' && r.value)
+      .map((r) => r.value);
   } catch (e) {
-    console.warn('[Art] Local manifest load failed:', e);
+    console.warn('[Art] Met fetch failed:', e);
     return [];
   }
 }
 
 /**
- * Ingestion: Art Institute of Chicago (AIC) - Deep Landscape Filtered
+ * 2. Art Institute of Chicago (AIC) - Deep Public-Domain / IIIF
  */
 async function fetchAICArtworks() {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const page = pickUniqueRandomPage('aic', 1, 350);
+      const page = pickUniqueRandomPage('aic', 1, 450);
       const url = `https://api.artic.edu/api/v1/artworks?page=${page}&limit=25&fields=id,title,artist_title,date_display,image_id,thumbnail`;
       const res = await fetchWithTimeout(url, { cache: 'no-store' }, 6500);
       if (!res.ok) throw new Error(`AIC status: ${res.status}`);
@@ -506,8 +587,7 @@ async function fetchAICArtworks() {
       const items = (json.data || [])
         .filter((d) => {
           if (!d.image_id || !d.title || !d.thumbnail?.width || !d.thumbnail?.height) return false;
-          const ratio = d.thumbnail.width / d.thumbnail.height;
-          return ratio >= MIN_LANDSCAPE_RATIO;
+          return d.thumbnail.width / d.thumbnail.height >= MIN_ASPECT_RATIO;
         })
         .map((d) => {
           const targetWidth = d.thumbnail.width >= 1200 ? 1200 : 843;
@@ -518,7 +598,7 @@ async function fetchAICArtworks() {
             year: d.date_display || '',
             source: 'Art Institute of Chicago',
             sourceIcon: '🏛️',
-            genre: 'museum',
+            providerKey: 'aic',
             aspectRatio: d.thumbnail.width / d.thumbnail.height,
             imageUrl: `https://www.artic.edu/iiif/2/${d.image_id}/full/${targetWidth},/0/default.jpg`,
           };
@@ -533,22 +613,20 @@ async function fetchAICArtworks() {
 }
 
 /**
- * Ingestion: Cleveland Museum of Art (CMA) - Deep CC0 Landscape Filtered
+ * 3. Cleveland Museum of Art (CMA) - Deep CC0 Open Access
  */
 async function fetchCMAArtworks() {
   try {
-    const skip = pickUniqueRandomPage('cma', 0, 2400);
+    const skip = pickUniqueRandomPage('cma', 0, 3200);
     const url = `https://openaccess-api.clevelandart.org/api/artworks/?has_image=1&cc0=1&limit=20&skip=${skip}`;
     const res = await fetchWithTimeout(url, { cache: 'no-store' }, 7000);
     if (!res.ok) throw new Error(`CMA status: ${res.status}`);
     const json = await res.json();
-    const items = (json.data || [])
+    return (json.data || [])
       .filter((d) => {
         const web = d.images?.web;
         if (!web?.url || !web?.width || !web?.height) return false;
-        const w = Number(web.width);
-        const h = Number(web.height);
-        return h > 0 && w / h >= MIN_LANDSCAPE_RATIO;
+        return passesDimensionGate(web.width, web.height);
       })
       .map((d) => {
         const rawArtist = d.creators && d.creators[0] ? d.creators[0].description : 'Unknown Artist';
@@ -562,12 +640,11 @@ async function fetchCMAArtworks() {
           year: d.creation_date || '',
           source: 'Cleveland Museum of Art',
           sourceIcon: '🏛️',
-          genre: 'museum',
+          providerKey: 'cma',
           aspectRatio: w / h,
           imageUrl: d.images.web.url,
         };
       });
-    return items;
   } catch (e) {
     console.warn('[Art] CMA fetch failed:', e);
     return [];
@@ -575,7 +652,162 @@ async function fetchCMAArtworks() {
 }
 
 /**
- * Ingestion: NASA Cosmic & Earth Library (Deep Query + Random Page Sampling)
+ * 4. SMK — Statens Museum for Kunst (National Gallery of Denmark)
+ */
+async function fetchSMKArtworks() {
+  try {
+    const offset = pickUniqueRandomPage('smk', 0, 22000);
+    const url = `https://api.smk.dk/api/v1/art/search/?keys=*&filters=[has_image:true],[public_domain:true]&offset=${offset}&rows=20`;
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 6500);
+    if (!res.ok) throw new Error(`SMK status: ${res.status}`);
+    const json = await res.json();
+
+    return (json.items || [])
+      .filter((d) => {
+        if (!d.image_thumbnail || !d.image_width || !d.image_height) return false;
+        return passesDimensionGate(d.image_width, d.image_height);
+      })
+      .map((d) => {
+        const title =
+          d.titles?.find((t) => t.language === 'en')?.title ||
+          d.titles?.[0]?.title ||
+          'Untitled';
+        const artist =
+          d.artist?.[0] ||
+          d.production?.[0]?.creator ||
+          'Unknown Artist';
+        const rawDate = d.production_date?.[0]?.period || d.production_date?.[0]?.start || '';
+        const yearMatch = String(rawDate).match(/\b(1[4-9]\d{2}|20\d{2})\b/);
+        const imageUrl = String(d.image_thumbnail).replace(/\/full\/![0-9]+,\//, '/full/!1200,/');
+
+        return {
+          id: `smk-${d.object_number || d.id}`,
+          title,
+          artist,
+          year: yearMatch ? yearMatch[0] : '',
+          source: 'National Gallery of Denmark (SMK)',
+          sourceIcon: '🏛️',
+          providerKey: 'smk',
+          aspectRatio: Number(d.image_width) / Number(d.image_height),
+          imageUrl,
+        };
+      });
+  } catch (e) {
+    console.warn('[Art] SMK fetch failed:', e);
+    return [];
+  }
+}
+
+/**
+ * 5. Smithsonian Open Access (via server-side /api/smithsonian proxy)
+ */
+async function fetchSmithsonianArtworks() {
+  try {
+    const units = ['HMSG', 'SAAM', 'NASM', 'CHNDM', 'FSG', 'NPG'];
+    const unit = units[Math.floor(Math.random() * units.length)];
+    const start = pickUniqueRandomPage('smithsonian', 0, 3200);
+    const url = `/api/smithsonian?unit=${unit}&start=${start}&rows=18`;
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 7000);
+    if (!res.ok) throw new Error(`Smithsonian proxy status: ${res.status}`);
+    const json = await res.json();
+    return Array.isArray(json.items) ? json.items : [];
+  } catch (e) {
+    console.warn('[Art] Smithsonian fetch failed:', e);
+    return [];
+  }
+}
+
+/**
+ * 6. Library of Congress (Rotates across Highsmith Modern, 1940s Kodachrome, and 1890s Photochroms)
+ */
+async function fetchLOCPhotography() {
+  const collections = [
+    {
+      slug: 'carol-m-highsmith',
+      maxPage: 1500,
+      defaultArtist: 'Carol M. Highsmith',
+      sourceLabel: 'Library of Congress',
+    },
+    {
+      slug: 'photochrom-prints',
+      maxPage: 650,
+      defaultArtist: 'Photochrom Print Archive',
+      sourceLabel: 'Library of Congress Photochrom',
+    },
+    {
+      slug: 'fsa-owi-color-photographs',
+      maxPage: 150,
+      defaultArtist: 'FSA / OWI Photographer',
+      sourceLabel: 'Library of Congress 1940s Color',
+    },
+  ];
+
+  try {
+    const col = collections[Math.floor(Math.random() * collections.length)];
+    const page = pickUniqueRandomPage('loc', 1, col.maxPage);
+    const url = `https://www.loc.gov/collections/${col.slug}/?fo=json&c=15&sp=${page}`;
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 7000);
+    if (!res.ok) throw new Error(`LOC status: ${res.status}`);
+    const json = await res.json();
+
+    return (json.results || [])
+      .map((r) => {
+        const variants = (r.image_url || [])
+          .map((rawUrl) => {
+            const match = rawUrl.match(/#h=(\d+)&w=(\d+)/);
+            if (!match) return null;
+            return {
+              url: rawUrl.split('#')[0],
+              h: Number(match[1]),
+              w: Number(match[2]),
+            };
+          })
+          .filter(Boolean);
+
+        const best =
+          variants.find((v) => v.w >= 950 && v.w <= 2200) ||
+          variants[variants.length - 1];
+
+        if (!best || !passesDimensionGate(best.w, best.h)) return null;
+
+        const cleanTitle = String(r.title || 'Archival Photograph')
+          .replace(/^\[|\]$/g, '')
+          .replace(/[\s,./]+$/, '')
+          .trim();
+        const yearMatch = String(r.date || '').match(/\b(18|19|20)\d{2}\b/);
+
+        let artist = col.defaultArtist;
+        if (col.slug !== 'carol-m-highsmith' && Array.isArray(r.contributor) && r.contributor[0]) {
+          const rawContrib = String(r.contributor[0]).trim();
+          if (rawContrib.includes(',')) {
+            const [last, first] = rawContrib.split(',').map((s) => s.trim());
+            if (first && last) {
+              artist = `${first} ${last}`.replace(/\b\w/g, (c) => c.toUpperCase());
+            }
+          }
+        }
+
+        return {
+          id: `loc-${r.id ? r.id.split('/').filter(Boolean).pop() : Math.random()}`,
+          title: cleanTitle,
+          artist,
+          year: yearMatch ? yearMatch[0] : '',
+          source: col.sourceLabel,
+          sourceIcon: '📷',
+          providerKey: 'loc',
+          aspectRatio: best.w / best.h,
+          imageUrl: best.url,
+        };
+      })
+      .filter(Boolean);
+  } catch (e) {
+    console.warn('[Art] Library of Congress fetch failed:', e);
+    return [];
+  }
+}
+
+/**
+ * 7. NASA Cosmic & Earth Library (Deep Query + Random Page Sampling)
  */
 async function fetchNASAPhotography() {
   const topics = [
@@ -605,15 +837,15 @@ async function fetchNASAPhotography() {
     const q = topics[Math.floor(Math.random() * topics.length)];
     const page = pickUniqueRandomPage('nasa', 1, 4);
     const url = `https://images-api.nasa.gov/search?q=${encodeURIComponent(q)}&media_type=image&page=${page}`;
-    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 5000);
+    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 5500);
     if (!res.ok) throw new Error(`NASA status: ${res.status}`);
     const json = await res.json();
     const candidates = (json.collection?.items || []).filter(
       (it) => it.links?.[0]?.href && /\.(jpe?g|png)/i.test(it.links[0].href) && it.data?.[0]
     );
 
-    const items = shuffleArray(candidates)
-      .slice(0, 20)
+    return shuffleArray(candidates)
+      .slice(0, 15)
       .map((it) => {
         const d = it.data[0];
         return {
@@ -623,11 +855,10 @@ async function fetchNASAPhotography() {
           year: d.date_created ? d.date_created.substring(0, 4) : '',
           source: 'NASA Cosmic Library',
           sourceIcon: '🔭',
-          genre: 'cosmos',
+          providerKey: 'nasa',
           imageUrl: it.links[0].href,
         };
       });
-    return items;
   } catch (e) {
     console.warn('[Art] NASA fetch failed:', e);
     return [];
@@ -655,7 +886,6 @@ function cleanWikiTitle(rawTitle, fallbackLabel) {
     .replace(/_/g, ' ')
     .trim();
 
-  // Replace raw numeric camera/social filenames with a clean descriptive label
   if (!title || /^[\d\s_-]+(o|n)?(-\d+)?$/i.test(title) || /^(IMG|DSC|DSCF|PXL|MVIMG)[_\s-]?\d+/i.test(title)) {
     return fallbackLabel;
   }
@@ -666,20 +896,20 @@ function cleanWikiTitle(rawTitle, fallbackLabel) {
  * Generate random timestamp window for deep Wikimedia Commons category exploration
  */
 function getRandomWikiStartIso() {
-  const year = 2013 + Math.floor(Math.random() * 13); // 2013..2025
+  const year = 2012 + Math.floor(Math.random() * 14); // 2012..2025
   const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
   const day = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0');
   return `${year}-${month}-${day}T00:00:00Z`;
 }
 
 /**
- * Shared Wikimedia Commons Category File Fetcher (Deep Timestamp Sampling + Plain Fallback)
+ * Shared Wikimedia Commons Category File Fetcher (Single Seat Capped)
  */
-async function fetchWikimediaCategoryFiles(cat, sourceLabel, genre, sourceIcon) {
+async function fetchWikimediaCategoryFiles(cat, sourceLabel, sourceIcon) {
   const buildUrl = (useTimestampWindow) => {
     const base =
       `https://commons.wikimedia.org/w/api.php?action=query&generator=categorymembers` +
-      `&gcmtitle=${encodeURIComponent(cat.name)}&gcmtype=file&gcmnamespace=6&gcmlimit=25` +
+      `&gcmtitle=${encodeURIComponent(cat.name)}&gcmtype=file&gcmnamespace=6&gcmlimit=16` +
       `&prop=imageinfo&iiprop=url|size|mime|extmetadata&iiurlwidth=1600&format=json&origin=*`;
     if (!useTimestampWindow) return base;
     const dir = Math.random() < 0.5 ? 'ascending' : 'descending';
@@ -696,7 +926,7 @@ async function fetchWikimediaCategoryFiles(cat, sourceLabel, genre, sourceIcon) 
         }
         const w = ii.thumbwidth || ii.width || 0;
         const h = ii.thumbheight || ii.height || 0;
-        return w >= MIN_TV_IMAGE_WIDTH && h > 0 && w / h >= MIN_LANDSCAPE_RATIO;
+        return passesDimensionGate(w, h);
       })
       .map((p) => {
         const ii = p.imageinfo[0];
@@ -716,7 +946,7 @@ async function fetchWikimediaCategoryFiles(cat, sourceLabel, genre, sourceIcon) 
         }
 
         const rawDate = stripHtml(meta.DateTimeOriginal?.value || '');
-        const yearMatch = rawDate.match(/\b(19|20)\d{2}\b/);
+        const yearMatch = rawDate.match(/\b(18|19|20)\d{2}\b/);
         const year = yearMatch ? yearMatch[0] : '';
 
         return {
@@ -726,7 +956,7 @@ async function fetchWikimediaCategoryFiles(cat, sourceLabel, genre, sourceIcon) 
           year,
           source: sourceLabel,
           sourceIcon,
-          genre,
+          providerKey: 'wikimedia',
           aspectRatio: w / h,
           imageUrl: ii.thumburl,
         };
@@ -738,8 +968,7 @@ async function fetchWikimediaCategoryFiles(cat, sourceLabel, genre, sourceIcon) 
     if (!res.ok) throw new Error(`Wikimedia status: ${res.status}`);
     let items = parseResponse(await res.json());
 
-    // If a random timestamp slice happens to be sparse, fall back to standard category listing
-    if (items.length < 4) {
+    if (items.length < 3) {
       const fallbackRes = await fetchWithTimeout(buildUrl(false), { cache: 'no-store' }, 4500);
       if (fallbackRes.ok) {
         const fallbackItems = parseResponse(await fallbackRes.json());
@@ -754,10 +983,10 @@ async function fetchWikimediaCategoryFiles(cat, sourceLabel, genre, sourceIcon) 
 }
 
 /**
- * Ingestion: Wikimedia Commons Street Art, Murals, Graffiti & Contemporary Art
+ * 8. Wikimedia Commons (Unified Single Seat: Featured Pictures + Street Art/Murals)
  */
-async function fetchWikimediaStreetArt() {
-  const categories = [
+async function fetchWikimediaUnified() {
+  const streetCategories = [
     { name: 'Category:Street_art', label: 'Street Art' },
     { name: 'Category:Murals', label: 'Wall Mural' },
     { name: 'Category:East_Side_Gallery', label: 'East Side Gallery Mural' },
@@ -769,94 +998,27 @@ async function fetchWikimediaStreetArt() {
     { name: 'Category:Contemporary_art', label: 'Contemporary Art' },
   ];
 
-  const picked = shuffleArray(categories).slice(0, 2);
-  const results = await Promise.all(
-    picked.map((cat) => fetchWikimediaCategoryFiles(cat, 'Wikimedia Commons', 'street', '🎨'))
-  );
-  return results.flat();
-}
+  const featuredCat = {
+    name: 'Category:Featured_pictures_on_Wikimedia_Commons',
+    label: 'Featured Picture',
+  };
+  const streetCat = streetCategories[Math.floor(Math.random() * streetCategories.length)];
 
-/**
- * Ingestion: Wikimedia Commons Featured Photography (Landscapes, Nature, Architecture)
- */
-async function fetchWikimediaPhotography() {
-  const categories = [
-    { name: 'Category:Featured_pictures_of_landscapes', label: 'Featured Landscape' },
-    { name: 'Category:Featured_pictures_of_mountains', label: 'Alpine Panorama' },
-    { name: 'Category:Featured_pictures_of_bodies_of_water', label: 'Coastal & Water Study' },
-    { name: 'Category:Featured_pictures_of_architecture', label: 'Architectural Study' },
-    { name: 'Category:Featured_pictures_of_trees', label: 'Forest & Botanical Study' },
-  ];
+  const [featuredItems, streetItems] = await Promise.all([
+    fetchWikimediaCategoryFiles(featuredCat, 'Wikimedia Featured Pictures', '📷'),
+    fetchWikimediaCategoryFiles(streetCat, 'Wikimedia Street Art', '🎨'),
+  ]);
 
-  const picked = shuffleArray(categories).slice(0, 2);
-  const results = await Promise.all(
-    picked.map((cat) =>
-      fetchWikimediaCategoryFiles(cat, 'Wikimedia Featured Photography', 'photography', '📷')
-    )
-  );
-  return results.flat();
-}
-
-/**
- * Ingestion: Library of Congress (Carol M. Highsmith Contemporary American Photography)
- */
-async function fetchLOCPhotography() {
-  try {
-    const page = pickUniqueRandomPage('loc', 1, 1500);
-    const url = `https://www.loc.gov/collections/carol-m-highsmith/?fo=json&c=15&sp=${page}`;
-    const res = await fetchWithTimeout(url, { cache: 'no-store' }, 7000);
-    if (!res.ok) throw new Error(`LOC status: ${res.status}`);
-    const json = await res.json();
-
-    return (json.results || [])
-      .map((r) => {
-        const variants = (r.image_url || [])
-          .map((rawUrl) => {
-            const match = rawUrl.match(/#h=(\d+)&w=(\d+)/);
-            if (!match) return null;
-            return {
-              url: rawUrl.split('#')[0],
-              h: Number(match[1]),
-              w: Number(match[2]),
-            };
-          })
-          .filter(Boolean);
-
-        const best =
-          variants.find((v) => v.w >= 950 && v.w <= 2200) ||
-          variants[variants.length - 1];
-
-        if (!best || best.w < MIN_TV_IMAGE_WIDTH || best.h <= 0) return null;
-        const ratio = best.w / best.h;
-        if (ratio < MIN_LANDSCAPE_RATIO) return null;
-
-        const cleanTitle = String(r.title || 'American Landscape')
-          .replace(/[\s,./]+$/, '')
-          .trim();
-        const yearMatch = String(r.date || '').match(/\b(19|20)\d{2}\b/);
-
-        return {
-          id: `loc-${r.id ? r.id.split('/').filter(Boolean).pop() : Math.random()}`,
-          title: cleanTitle,
-          artist: 'Carol M. Highsmith',
-          year: yearMatch ? yearMatch[0] : '',
-          source: 'Library of Congress',
-          sourceIcon: '📷',
-          genre: 'photography',
-          aspectRatio: ratio,
-          imageUrl: best.url,
-        };
-      })
-      .filter(Boolean);
-  } catch (e) {
-    console.warn('[Art] Library of Congress fetch failed:', e);
-    return [];
-  }
+  // Blend 50/50 within the single Wikimedia seat (capped to MAX_ITEMS_PER_PROVIDER downstream)
+  return shuffleArray([
+    ...shuffleArray(featuredItems).slice(0, 4),
+    ...shuffleArray(streetItems).slice(0, 4),
+  ]);
 }
 
 /**
  * Apply artwork assets to buffer layer (a or b)
- * Automatically switches between full-bleed cover (16:9-ish) and contain+halo (4:3 / 3:2)
+ * Automatically switches between full-bleed cover (16:9-ish) and contain+halo (4:5 / 1:1 / 4:3)
  */
 function applyArtworkToLayer(layerKey, artwork, naturalRatio = null) {
   if (!artwork || !artwork.imageUrl) return;
@@ -897,7 +1059,6 @@ function updateArtworkHUD(artwork) {
     if (hasYear) {
       artYearEl.textContent = artwork.year;
       artYearWrapEl.style.display = 'inline';
-      // Adjust separator comma only if artist is also shown
       artYearWrapEl.firstChild.textContent = hasArtist ? ', ' : '';
     } else {
       artYearWrapEl.style.display = 'none';
@@ -915,9 +1076,9 @@ function updateArtworkHUD(artwork) {
 }
 
 /**
- * Preload an image URL into browser memory with safety timeout & universal TV aspect-ratio gate
+ * Preload an image URL into browser memory with safety timeout & relaxed TV dimension gate
  */
-function preloadImage(url, timeoutMs = 5000) {
+function preloadImage(url, timeoutMs = 5500) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.referrerPolicy = 'no-referrer';
@@ -933,8 +1094,8 @@ function preloadImage(url, timeoutMs = 5000) {
       const h = img.naturalHeight || 0;
       const ratio = h > 0 ? w / h : 0;
 
-      if (w < MIN_TV_IMAGE_WIDTH || ratio < MIN_LANDSCAPE_RATIO) {
-        reject(new Error(`Non-landscape or low-res (${w}x${h}, ratio ${ratio.toFixed(2)})`));
+      if (!passesDimensionGate(w, h)) {
+        reject(new Error(`Unsuitable dimensions (${w}x${h}, ratio ${ratio.toFixed(2)})`));
         return;
       }
 
@@ -1031,12 +1192,12 @@ async function transitionToNextArtwork(skipCount = 0) {
     currentQueueIndex -= pruneCount;
   }
 
-  // If user clicks fast before batch flush completes, deal any waiting pool items immediately
+  // If user advances quickly before batch flush completes, deal any waiting pool items immediately
   if (artworkQueue.length - 1 - currentQueueIndex < 2) {
-    dealBalancedDeckFromPools();
+    dealBalancedDeckFromPools(true);
   }
 
-  // Trigger rolling background refill whenever < 14 unseen slides remain
+  // Trigger rolling background refill whenever < 10 unseen slides remain
   const remainingCount = artworkQueue.length - 1 - currentQueueIndex;
   if (remainingCount < REPLENISH_THRESHOLD) {
     replenishArtworkQueue();
@@ -1048,8 +1209,7 @@ async function transitionToNextArtwork(skipCount = 0) {
 
   let loadedRatio = nextArtwork.aspectRatio || null;
   try {
-    // Preload image and validate landscape aspect ratio before buffer swap
-    const result = await preloadImage(nextArtwork.imageUrl, 5000);
+    const result = await preloadImage(nextArtwork.imageUrl, 5500);
     loadedRatio = result.ratio;
   } catch (err) {
     console.warn('[Art] Skipping unsuitable artwork:', nextArtwork.title, err.message);
@@ -1074,79 +1234,95 @@ function startRotationCycle() {
 let deckDealTimer = null;
 let hasLiveItemsDealt = false;
 
-function getProviderFamily(source) {
-  if (!source) return '';
-  if (source.startsWith('Wikimedia')) return 'wikimedia';
-  return source;
-}
-
 /**
- * Stratified Round-Robin + Anti-Streak Deck Builder
- * Re-interleaves the entire unplayed tail whenever new sources arrive so fast providers never cluster at the front.
+ * 8-Provider Equal-Seat Deck Builder (Strict No-Streak, No Tail Dump)
  */
-function dealBalancedDeckFromPools() {
+function dealBalancedDeckFromPools(allowPartialDrain = false) {
   if (deckDealTimer) {
     clearTimeout(deckDealTimer);
     deckDealTimer = null;
   }
 
-  // Pull any existing unplayed items back into genrePools so late-arriving sources weave into the front too
+  // Pull any existing unplayed slides back into providerPools so late-arriving sources weave into the front
   if (artworkQueue.length > currentQueueIndex + 1) {
     const unplayedTail = artworkQueue.splice(currentQueueIndex + 1);
     unplayedTail.forEach((item) => {
-      const bucket = GENRE_BUCKETS.includes(item.genre) ? item.genre : 'museum';
-      genrePools[bucket].push(item);
+      const key = PROVIDER_KEYS.includes(item.providerKey) ? item.providerKey : 'aic';
+      providerPools[key].push(item);
     });
   }
 
-  GENRE_BUCKETS.forEach((bucket) => {
-    if (genrePools[bucket].length > 1) {
-      genrePools[bucket] = shuffleArray(genrePools[bucket]);
+  PROVIDER_KEYS.forEach((key) => {
+    if (providerPools[key].length > 1) {
+      providerPools[key] = shuffleArray(providerPools[key]);
     }
   });
 
   const dealt = [];
-  const lookbackStart = Math.max(0, artworkQueue.length - 6);
+  const lookbackStart = Math.max(0, artworkQueue.length - ARTIST_COOLDOWN_WINDOW);
   const recentTail = artworkQueue.slice(lookbackStart);
-  let lastSource = recentTail.length > 0 ? recentTail[recentTail.length - 1].source : null;
-  let lastFamily = getProviderFamily(lastSource);
+
+  const recentProviders = recentTail
+    .slice(-PROVIDER_COOLDOWN_WINDOW)
+    .map((item) => item.providerKey)
+    .filter(Boolean);
+
   const recentArtists = recentTail
     .map((item) => item.artist)
     .filter((a) => a && a !== 'Unknown Artist');
 
-  const pickBestIndex = (pool) => {
-    let idx = pool.findIndex(
-      (item) =>
-        getProviderFamily(item.source) !== lastFamily &&
-        (item.artist === 'Unknown Artist' || !recentArtists.includes(item.artist))
+  const pickArtistSafeIndex = (pool) => {
+    const idx = pool.findIndex(
+      (item) => item.artist === 'Unknown Artist' || !recentArtists.includes(item.artist)
     );
-    if (idx !== -1) return idx;
-    idx = pool.findIndex((item) => item.source !== lastSource);
     return idx !== -1 ? idx : 0;
   };
 
-  while (GENRE_BUCKETS.some((b) => genrePools[b].length > 0)) {
-    const cycleOrder = shuffleArray(GENRE_BUCKETS);
-    for (const bucket of cycleOrder) {
-      const pool = genrePools[bucket];
-      if (pool.length === 0) continue;
+  const minDistinctProviders = allowPartialDrain ? 1 : 3;
 
-      const idx = pickBestIndex(pool);
-      const [chosen] = pool.splice(idx, 1);
-      dealt.push(chosen);
-      lastSource = chosen.source;
-      lastFamily = getProviderFamily(chosen.source);
+  while (true) {
+    const activeProviders = PROVIDER_KEYS.filter((k) => providerPools[k].length > 0);
+    if (activeProviders.length === 0) break;
+    // Stop before draining single-provider leftovers into a monotonous tail
+    if (activeProviders.length < minDistinctProviders && dealt.length >= 12) break;
 
-      if (chosen.artist && chosen.artist !== 'Unknown Artist') {
-        recentArtists.push(chosen.artist);
-        if (recentArtists.length > 6) recentArtists.shift();
+    const lastProvider = recentProviders[recentProviders.length - 1] || null;
+    // Prefer providers not seen in the last 4 slides; fall back to any provider != lastProvider
+    let eligible = activeProviders.filter((k) => !recentProviders.includes(k));
+    if (eligible.length === 0) {
+      eligible = activeProviders.filter((k) => k !== lastProvider);
+    }
+    if (eligible.length === 0) {
+      if (!allowPartialDrain && dealt.length > 0) break;
+      eligible = activeProviders;
+    }
+
+    const chosenKey = eligible[Math.floor(Math.random() * eligible.length)];
+    const pool = providerPools[chosenKey];
+    const idx = pickArtistSafeIndex(pool);
+    const [chosen] = pool.splice(idx, 1);
+
+    dealt.push(chosen);
+    recentProviders.push(chosenKey);
+    if (recentProviders.length > PROVIDER_COOLDOWN_WINDOW) {
+      recentProviders.shift();
+    }
+
+    if (chosen.artist && chosen.artist !== 'Unknown Artist') {
+      recentArtists.push(chosen.artist);
+      if (recentArtists.length > ARTIST_COOLDOWN_WINDOW) {
+        recentArtists.shift();
       }
     }
   }
 
   if (dealt.length > 0) {
     artworkQueue.push(...dealt);
-    console.log(`[Art Engine] Dealt ${dealt.length} balanced pieces. Queue depth: ${artworkQueue.length}`);
+    const counts = dealt.reduce((acc, item) => {
+      acc[item.providerKey] = (acc[item.providerKey] || 0) + 1;
+      return acc;
+    }, {});
+    console.log(`[Art Engine] Dealt ${dealt.length} balanced slides:`, counts);
 
     if (
       hasLiveItemsDealt &&
@@ -1169,33 +1345,33 @@ function dealBalancedDeckFromPools() {
 }
 
 /**
- * Ingest new items into genre buckets, skipping duplicates & recently seen IDs
+ * Ingest items into a single provider seat (strictly capped to MAX_ITEMS_PER_PROVIDER per refill)
  */
-function ingestIntoBalancedDeck(newItems, isLiveRemote = false) {
+function ingestProviderBatch(providerKey, newItems, isLiveRemote = false) {
   if (!Array.isArray(newItems) || newItems.length === 0) return;
+  const key = PROVIDER_KEYS.includes(providerKey) ? providerKey : 'aic';
 
-  let addedCount = 0;
-  newItems.forEach((item) => {
-    if (!item || !item.id || !item.imageUrl) return;
-    if (queuedIds.has(item.id) || hasRecentlySeen(item.id)) return;
+  const uniqueFresh = shuffleArray(newItems)
+    .filter((item) => item && item.id && item.imageUrl && !queuedIds.has(item.id) && !hasRecentlySeen(item.id))
+    .slice(0, MAX_ITEMS_PER_PROVIDER);
 
-    const bucket = GENRE_BUCKETS.includes(item.genre) ? item.genre : 'museum';
+  if (uniqueFresh.length === 0) return;
+
+  uniqueFresh.forEach((item) => {
     queuedIds.add(item.id);
-    genrePools[bucket].push(item);
-    addedCount++;
+    providerPools[key].push({ ...item, providerKey: key });
   });
 
-  if (addedCount === 0) return;
   if (isLiveRemote) hasLiveItemsDealt = true;
 
-  // Wait up to 2.6s (or until all 4 genre buckets are populated) before dealing so fast & slower APIs weave evenly
-  const populatedBuckets = GENRE_BUCKETS.filter((b) => genrePools[b].length > 0).length;
-  if (populatedBuckets === GENRE_BUCKETS.length) {
-    dealBalancedDeckFromPools();
+  // Batch concurrent arrivals for up to 2.5s (or once 5+ distinct providers have arrived)
+  const populatedProviders = PROVIDER_KEYS.filter((k) => providerPools[k].length > 0).length;
+  if (populatedProviders >= 5) {
+    dealBalancedDeckFromPools(false);
   } else if (!deckDealTimer) {
     deckDealTimer = setTimeout(() => {
-      dealBalancedDeckFromPools();
-    }, 2600);
+      dealBalancedDeckFromPools(false);
+    }, 2500);
   }
 }
 
@@ -1209,37 +1385,41 @@ function pickRandomStarter() {
 }
 
 /**
- * Fetch one deep randomized batch from all reliable remote collections
+ * Fetch one deep randomized batch across all 8 distinct providers in parallel
  */
 async function replenishArtworkQueue() {
   if (isReplenishing) return;
   isReplenishing = true;
 
-  const remoteFetchers = [
-    fetchAICArtworks(),
-    fetchCMAArtworks(),
-    fetchNASAPhotography(),
-    fetchWikimediaStreetArt(),
-    fetchWikimediaPhotography(),
-    fetchLOCPhotography(),
+  const providerJobs = [
+    ['met', fetchMetArtworks()],
+    ['aic', fetchAICArtworks()],
+    ['cma', fetchCMAArtworks()],
+    ['smk', fetchSMKArtworks()],
+    ['smithsonian', fetchSmithsonianArtworks()],
+    ['loc', fetchLOCPhotography()],
+    ['nasa', fetchNASAPhotography()],
+    ['wikimedia', fetchWikimediaUnified()],
   ];
 
   try {
     await Promise.allSettled(
-      remoteFetchers.map((p) =>
-        p
-          .then((items) => ingestIntoBalancedDeck(items, true))
-          .catch((err) => console.warn('[Art] Remote source warning:', err))
+      providerJobs.map(([providerKey, promise]) =>
+        promise
+          .then((items) => ingestProviderBatch(providerKey, items, true))
+          .catch((err) => console.warn(`[Art] ${providerKey} source warning:`, err))
       )
     );
   } finally {
-    dealBalancedDeckFromPools();
+    // Allow partial deal only if very few slides exist in the queue
+    const needsFallbackDrain = artworkQueue.length - 1 - currentQueueIndex < 6;
+    dealBalancedDeckFromPools(needsFallbackDrain);
     isReplenishing = false;
   }
 }
 
 /**
- * Populate Artwork Queue (Randomized Boot Starter + Auto-Advance + Balanced Endless Deck)
+ * Populate Artwork Queue (Randomized Boot Starter + Auto-Advance + 8-Source Equal-Seat Deck)
  */
 function initializeArtworkEngine() {
   loadSeenHistory();
@@ -1270,11 +1450,7 @@ function initializeArtworkEngine() {
   // Start rotation immediately; never block on slow remote sources
   startRotationCycle();
 
-  // Seed local manifest silently if unseen, then trigger live deep-catalog round
-  loadLocalManifest()
-    .then((items) => ingestIntoBalancedDeck(items, false))
-    .catch(() => {});
-
+  // Trigger all 8 live deep-catalog sources immediately
   replenishArtworkQueue();
 }
 

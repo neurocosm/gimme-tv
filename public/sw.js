@@ -5,7 +5,7 @@
  * Zero Image/API caching (network-only with cache: 'no-store') to prevent TV storage/memory degradation.
  */
 
-const BUILD_VERSION = 'v1.11162026.1716';
+const BUILD_VERSION = 'v1.11192026.2052';
 const SHELL_CACHE = `gimme-tv-shell-${BUILD_VERSION}`;
 
 const SHELL_ASSETS = [
@@ -56,8 +56,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Always fetch version.json live without caching
-  if (url.pathname === '/version.json') {
+  // 2. Always fetch version.json and /api/* live without caching
+  if (url.pathname === '/version.json' || url.pathname.startsWith('/api/')) {
     event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
   }
