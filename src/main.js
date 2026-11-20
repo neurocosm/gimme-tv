@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11192026.2105';
+export const APP_BUILD_VERSION = 'v1.11202026.1005';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -1600,11 +1600,11 @@ requestScreenWakeLock();
 let swRegistration = null;
 let isCheckingUpdate = false;
 let updateAvailableVersion = null;
-let userInitiatedUpdate = false;
+const VERSION_STAMP_REGEX = /^v\d+\.\d{8}\.\d{4}$/;
 const UPDATE_RELOAD_GUARD_KEY = 'gimme_tv_update_reload_guard';
 const UPDATE_RELOAD_COOLDOWN_MS = 60 * 1000;
 
-// Clean any one-time cache-bust query param left by an explicit update reload
+// Clean any legacy _u query param left over from an earlier build
 try {
   const currentUrl = new URL(window.location.href);
   if (currentUrl.searchParams.has('_u')) {
@@ -1643,13 +1643,6 @@ function clearReloadGuardIfResolved() {
 
 clearReloadGuardIfResolved();
 
-function performCleanUpdateReload(targetVersion = null) {
-  writeReloadGuard(targetVersion);
-  const nextUrl = new URL(window.location.href);
-  nextUrl.searchParams.set('_u', String(Date.now()));
-  window.location.replace(nextUrl.toString());
-}
-
 /**
  * Display subtle "UPDATE AVAILABLE" badge on the version button until tapped
  */
@@ -1664,12 +1657,22 @@ function showUpdateAvailableUI(newVer = null) {
     : 'New update ready — tap to reload';
 }
 
+function clearUpdateAvailableUI() {
+  updateAvailableVersion = null;
+  if (!buildStampEl) return;
+  buildStampEl.classList.remove('checking', 'updating', 'update-available', 'up-to-date');
+  buildStampEl.textContent = APP_BUILD_VERSION;
+  buildStampEl.removeAttribute('aria-busy');
+  buildStampEl.title = 'Tap to check for updates';
+}
+
 /**
- * Apply pending update ONLY when user explicitly taps "UPDATE AVAILABLE"
+ * Apply pending update ONLY when the user explicitly taps "UPDATE AVAILABLE".
+ * Purges stale caches, activates any waiting worker, and performs ONE clean reload.
  */
 async function applyPendingUpdate() {
-  userInitiatedUpdate = true;
   const targetVersion = updateAvailableVersion;
+  writeReloadGuard(targetVersion);
 
   if (buildStampEl) {
     buildStampEl.classList.remove('checking', 'update-available', 'up-to-date');
@@ -1677,7 +1680,7 @@ async function applyPendingUpdate() {
     buildStampEl.textContent = 'UPDATING...';
   }
 
-  // Purge stale shell caches before reload so browser cannot replay an old HTML/JS bundle
+  // Purge all shell caches so browser fetches fresh HTML/JS cleanly on reload
   if ('caches' in window) {
     try {
       const keys = await caches.keys();
@@ -1689,34 +1692,28 @@ async function applyPendingUpdate() {
     } catch (_err) {}
   }
 
-  if (swRegistration && swRegistration.waiting && navigator.serviceWorker.controller) {
-    console.log('[PWA] Activating waiting service worker...');
-    swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    // Safety reload fallback in case controllerchange does not fire
-    setTimeout(() => {
-      performCleanUpdateReload(targetVersion);
-    }, 2000);
-    return;
+  // Tell any waiting worker to take over cleanly (without relying on controllerchange)
+  if (swRegistration && swRegistration.waiting) {
+    try {
+      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    } catch (_err) {}
   }
 
-  console.log('[PWA] Applying server update via clean reload...');
   if (buildStampEl) buildStampEl.textContent = 'RELOADING...';
   setTimeout(() => {
-    performCleanUpdateReload(targetVersion);
-  }, 250);
+    window.location.reload();
+  }, 200);
 }
 
 /**
- * Phone-Home Update Checker (queries both Service Worker & /version.json)
- * Never triggers an automatic reload — only flags UPDATE AVAILABLE in HUD until tapped.
+ * Phone-Home Update Checker
+ * Single source of truth: live /version.json strictly validated against APP_BUILD_VERSION.
+ * Never flags false updates from Service Worker waiting states and NEVER auto-reloads.
  * @param {boolean} isManual - true when explicitly tapped/clicked by user
  */
 async function checkPhoneHomeUpdate(isManual = false) {
-  // If an update is already flagged and user taps the badge, apply it right away
-  if (
-    isManual &&
-    (updateAvailableVersion || (swRegistration?.waiting && navigator.serviceWorker.controller))
-  ) {
+  // If a verified version update is already flagged and user taps the badge, apply it now
+  if (isManual && updateAvailableVersion) {
     applyPendingUpdate();
     return;
   }
@@ -1732,47 +1729,50 @@ async function checkPhoneHomeUpdate(isManual = false) {
   }
 
   try {
-    // 1. Check Service Worker for newer sw.js
+    // Silently keep Service Worker updated in background (does not trigger UI badge or reload)
     if (swRegistration) {
-      await swRegistration.update();
-
-      if (swRegistration.waiting && navigator.serviceWorker.controller) {
-        updateAvailableVersion = updateAvailableVersion || 'new';
-        showUpdateAvailableUI(updateAvailableVersion);
-        return;
-      }
+      swRegistration.update().catch(() => {});
     }
 
-    // 2. Fetch live /version.json bypassing all caches
+    // Fetch live /version.json bypassing all caches
     const verRes = await fetch(`/version.json?t=${Date.now()}`, {
       cache: 'no-store',
+      credentials: 'same-origin',
     });
 
-    if (verRes.ok) {
+    const contentType = verRes.headers.get('content-type') || '';
+    if (verRes.ok && !verRes.redirected && contentType.includes('application/json')) {
       const verData = await verRes.json();
-      if (verData?.version && verData.version !== APP_BUILD_VERSION) {
-        const guard = readReloadGuard();
-        const justReloadedForSameTarget =
-          !isManual &&
-          guard &&
-          guard.targetVersion === verData.version &&
-          Date.now() - guard.ts < UPDATE_RELOAD_COOLDOWN_MS;
+      const serverVersion = typeof verData?.version === 'string' ? verData.version.trim() : '';
 
-        if (justReloadedForSameTarget) {
-          console.warn(
-            `[PWA] Update ${verData.version} still propagating after reload; suppressing loop.`
-          );
+      if (VERSION_STAMP_REGEX.test(serverVersion)) {
+        if (serverVersion !== APP_BUILD_VERSION) {
+          const guard = readReloadGuard();
+          const justReloadedForSameTarget =
+            !isManual &&
+            guard &&
+            guard.targetVersion === serverVersion &&
+            Date.now() - guard.ts < UPDATE_RELOAD_COOLDOWN_MS;
+
+          if (justReloadedForSameTarget) {
+            console.warn(
+              `[PWA] Update ${serverVersion} still propagating after reload; suppressing badge.`
+            );
+            return;
+          }
+
+          console.log(`[PWA] Newer version detected: ${serverVersion} (current: ${APP_BUILD_VERSION})`);
+          updateAvailableVersion = serverVersion;
+          showUpdateAvailableUI(serverVersion);
           return;
+        } else if (updateAvailableVersion) {
+          // Versions match — clear any previously shown update badge
+          clearUpdateAvailableUI();
         }
-
-        console.log(`[PWA] Newer version detected: ${verData.version} (current: ${APP_BUILD_VERSION})`);
-        updateAvailableVersion = verData.version;
-        showUpdateAvailableUI(verData.version);
-        return;
       }
     }
 
-    // 3. If manual check completed and no update was found, display confirmation
+    // If manual check completed and no update was found, display confirmation
     if (isManual && buildStampEl) {
       buildStampEl.classList.remove('checking', 'updating', 'update-available');
       buildStampEl.classList.add('up-to-date');
@@ -1806,39 +1806,6 @@ async function checkPhoneHomeUpdate(isManual = false) {
   }
 }
 
-/**
- * Listen for newly discovered Service Worker updates
- */
-function listenForSWUpdates(reg) {
-  if (!reg) return;
-
-  // If a newer worker is already waiting, notify user in the HUD
-  if (reg.waiting && navigator.serviceWorker.controller) {
-    console.log('[PWA] Waiting service worker ready for activation');
-    updateAvailableVersion = updateAvailableVersion || 'new';
-    showUpdateAvailableUI();
-  }
-
-  reg.addEventListener('updatefound', () => {
-    const newWorker = reg.installing;
-    if (!newWorker) return;
-
-    // Do NOT flag initial app install as an update
-    if (!navigator.serviceWorker.controller) {
-      console.log('[PWA] Initial service worker installing.');
-      return;
-    }
-
-    newWorker.addEventListener('statechange', () => {
-      if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-        console.log('[PWA] New version ready! Displaying UPDATE AVAILABLE.');
-        updateAvailableVersion = updateAvailableVersion || 'new';
-        showUpdateAvailableUI();
-      }
-    });
-  });
-}
-
 async function registerPWA() {
   if ('serviceWorker' in navigator) {
     try {
@@ -1848,43 +1815,21 @@ async function registerPWA() {
       });
       console.log('[PWA] Service Worker registered with scope:', swRegistration.scope);
 
-      // Listen for background SW updates
-      listenForSWUpdates(swRegistration);
-
-      // ONLY reload on controllerchange when the user explicitly initiated an update
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!userInitiatedUpdate) {
-          console.log('[PWA] Service Worker controller changed in background; skipping unsolicited reload.');
-          return;
-        }
-        if (!refreshing) {
-          refreshing = true;
-          console.log('[PWA] User-confirmed update activated, reloading interface...');
-          if (buildStampEl) {
-            buildStampEl.classList.remove('update-available', 'checking');
-            buildStampEl.classList.add('updating');
-            buildStampEl.textContent = 'RELOADING...';
-          }
-          setTimeout(() => {
-            performCleanUpdateReload(updateAvailableVersion);
-          }, 250);
-        }
-      });
+      // If an older worker is stuck waiting from a previous build, let it activate silently without reloading
+      if (swRegistration.waiting) {
+        try {
+          swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } catch (_e) {}
+      }
     } catch (err) {
       console.warn('[PWA] Service Worker registration failed:', err);
     }
   }
 
-  // Deterministic auto-check on boot
+  // Deterministic version check on boot (never reloads automatically)
   checkPhoneHomeUpdate(false);
 
-  // Check for updates whenever window regains focus
-  window.addEventListener('focus', () => {
-    checkPhoneHomeUpdate(false);
-  });
-
-  // Periodic background auto-check every 15 minutes
+  // Periodic background version check every 15 minutes
   setInterval(() => {
     checkPhoneHomeUpdate(false);
   }, 15 * 60 * 1000);

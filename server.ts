@@ -150,7 +150,8 @@ async function createApp() {
           if (
             filePath.endsWith('index.html') ||
             filePath.endsWith('sw.js') ||
-            filePath.endsWith('version.json')
+            filePath.endsWith('version.json') ||
+            filePath.endsWith('manifest.json')
           ) {
             setNoStoreHeaders(res);
           } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
@@ -171,45 +172,50 @@ async function createApp() {
       res.sendFile(path.join(DIST_DIR, 'index.html'));
     });
   } else {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: {
-        middlewareMode: true,
-        hmr: false,
-        ws: false,
-        allowedHosts: true,
-      },
-      appType: 'custom',
+    // Pure Express dev serving — zero Vite HMR client injection, zero WebSocket reconnect loops, zero JS-wrapped CSS
+    const PUBLIC_DIR = path.join(__dirname, 'public');
+    const SRC_DIR = path.join(__dirname, 'src');
+
+    app.use(
+      express.static(PUBLIC_DIR, {
+        index: false,
+        setHeaders(res, filePath) {
+          if (
+            filePath.endsWith('sw.js') ||
+            filePath.endsWith('version.json') ||
+            filePath.endsWith('manifest.json')
+          ) {
+            setNoStoreHeaders(res);
+          }
+        },
+      })
+    );
+
+    app.use(
+      '/src',
+      express.static(SRC_DIR, {
+        setHeaders(res) {
+          setNoStoreHeaders(res);
+        },
+      })
+    );
+
+    app.get('/style.css', (_req, res) => {
+      setNoStoreHeaders(res);
+      res.type('text/css; charset=utf-8');
+      res.sendFile(path.join(__dirname, 'style.css'));
     });
 
-    // In dev mode, prevent browser HTTP cache from replaying stale /src/* or /style.css
+    app.get('/local_art_manifest.json', (_req, res) => {
+      setNoStoreHeaders(res);
+      res.sendFile(path.join(__dirname, 'local_art_manifest.json'));
+    });
+
     app.use((req, res, next) => {
-      if (req.path.startsWith('/src/') || req.path === '/style.css') {
-        setNoStoreHeaders(res);
-      }
-      next();
-    });
-
-    app.use(vite.middlewares);
-
-    app.use(async (req, res, next) => {
       if (!isHtmlNavigationRequest(req)) return next();
-      try {
-        const htmlPath = path.join(__dirname, 'index.html');
-        let html = fs.readFileSync(htmlPath, 'utf-8');
-        html = await vite.transformIndexHtml(req.originalUrl, html);
-        // Strip Vite's HMR client script completely since HMR is disabled (prevents port 24678 WS reload loops)
-        html = html.replace(/<script\s+type="module"\s+src="\/@vite\/client"><\/script>\s*/gi, '');
-        setNoStoreHeaders(res);
-        res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' });
-        if (req.method === 'HEAD') {
-          res.end();
-        } else {
-          res.end(html);
-        }
-      } catch (e) {
-        next(e);
-      }
+      setNoStoreHeaders(res);
+      res.type('text/html; charset=utf-8');
+      res.sendFile(path.join(__dirname, 'index.html'));
     });
   }
 
