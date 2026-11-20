@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11192026.2052';
+export const APP_BUILD_VERSION = 'v1.11192026.2105';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -1600,6 +1600,55 @@ requestScreenWakeLock();
 let swRegistration = null;
 let isCheckingUpdate = false;
 let updateAvailableVersion = null;
+let userInitiatedUpdate = false;
+const UPDATE_RELOAD_GUARD_KEY = 'gimme_tv_update_reload_guard';
+const UPDATE_RELOAD_COOLDOWN_MS = 60 * 1000;
+
+// Clean any one-time cache-bust query param left by an explicit update reload
+try {
+  const currentUrl = new URL(window.location.href);
+  if (currentUrl.searchParams.has('_u')) {
+    currentUrl.searchParams.delete('_u');
+    window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
+  }
+} catch (_e) {}
+
+function readReloadGuard() {
+  try {
+    const raw = sessionStorage.getItem(UPDATE_RELOAD_GUARD_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+function writeReloadGuard(targetVersion) {
+  try {
+    sessionStorage.setItem(
+      UPDATE_RELOAD_GUARD_KEY,
+      JSON.stringify({ ts: Date.now(), targetVersion: targetVersion || null })
+    );
+  } catch (_e) {}
+}
+
+function clearReloadGuardIfResolved() {
+  const guard = readReloadGuard();
+  if (!guard) return;
+  if (guard.targetVersion && guard.targetVersion === APP_BUILD_VERSION) {
+    try {
+      sessionStorage.removeItem(UPDATE_RELOAD_GUARD_KEY);
+    } catch (_e) {}
+  }
+}
+
+clearReloadGuardIfResolved();
+
+function performCleanUpdateReload(targetVersion = null) {
+  writeReloadGuard(targetVersion);
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.set('_u', String(Date.now()));
+  window.location.replace(nextUrl.toString());
+}
 
 /**
  * Display subtle "UPDATE AVAILABLE" badge on the version button until tapped
@@ -1616,13 +1665,28 @@ function showUpdateAvailableUI(newVer = null) {
 }
 
 /**
- * Apply pending update when user taps "UPDATE AVAILABLE"
+ * Apply pending update ONLY when user explicitly taps "UPDATE AVAILABLE"
  */
-function applyPendingUpdate() {
+async function applyPendingUpdate() {
+  userInitiatedUpdate = true;
+  const targetVersion = updateAvailableVersion;
+
   if (buildStampEl) {
     buildStampEl.classList.remove('checking', 'update-available', 'up-to-date');
     buildStampEl.classList.add('updating');
     buildStampEl.textContent = 'UPDATING...';
+  }
+
+  // Purge stale shell caches before reload so browser cannot replay an old HTML/JS bundle
+  if ('caches' in window) {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((k) => k.startsWith('gimme-tv-shell-'))
+          .map((k) => caches.delete(k))
+      );
+    } catch (_err) {}
   }
 
   if (swRegistration && swRegistration.waiting && navigator.serviceWorker.controller) {
@@ -1630,20 +1694,21 @@ function applyPendingUpdate() {
     swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
     // Safety reload fallback in case controllerchange does not fire
     setTimeout(() => {
-      window.location.reload();
-    }, 2500);
+      performCleanUpdateReload(targetVersion);
+    }, 2000);
     return;
   }
 
-  console.log('[PWA] Applying server update via reload...');
+  console.log('[PWA] Applying server update via clean reload...');
   if (buildStampEl) buildStampEl.textContent = 'RELOADING...';
   setTimeout(() => {
-    window.location.reload();
-  }, 300);
+    performCleanUpdateReload(targetVersion);
+  }, 250);
 }
 
 /**
  * Phone-Home Update Checker (queries both Service Worker & /version.json)
+ * Never triggers an automatic reload — only flags UPDATE AVAILABLE in HUD until tapped.
  * @param {boolean} isManual - true when explicitly tapped/clicked by user
  */
 async function checkPhoneHomeUpdate(isManual = false) {
@@ -1686,6 +1751,20 @@ async function checkPhoneHomeUpdate(isManual = false) {
     if (verRes.ok) {
       const verData = await verRes.json();
       if (verData?.version && verData.version !== APP_BUILD_VERSION) {
+        const guard = readReloadGuard();
+        const justReloadedForSameTarget =
+          !isManual &&
+          guard &&
+          guard.targetVersion === verData.version &&
+          Date.now() - guard.ts < UPDATE_RELOAD_COOLDOWN_MS;
+
+        if (justReloadedForSameTarget) {
+          console.warn(
+            `[PWA] Update ${verData.version} still propagating after reload; suppressing loop.`
+          );
+          return;
+        }
+
         console.log(`[PWA] Newer version detected: ${verData.version} (current: ${APP_BUILD_VERSION})`);
         updateAvailableVersion = verData.version;
         showUpdateAvailableUI(verData.version);
@@ -1763,26 +1842,33 @@ function listenForSWUpdates(reg) {
 async function registerPWA() {
   if ('serviceWorker' in navigator) {
     try {
-      swRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      swRegistration = await navigator.serviceWorker.register('/sw.js', {
+        scope: '/',
+        updateViaCache: 'none',
+      });
       console.log('[PWA] Service Worker registered with scope:', swRegistration.scope);
 
       // Listen for background SW updates
       listenForSWUpdates(swRegistration);
 
-      // Handle transparent reload when a new service worker claims control
+      // ONLY reload on controllerchange when the user explicitly initiated an update
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!userInitiatedUpdate) {
+          console.log('[PWA] Service Worker controller changed in background; skipping unsolicited reload.');
+          return;
+        }
         if (!refreshing) {
           refreshing = true;
-          console.log('[PWA] New version activated, transparently reloading interface...');
+          console.log('[PWA] User-confirmed update activated, reloading interface...');
           if (buildStampEl) {
             buildStampEl.classList.remove('update-available', 'checking');
             buildStampEl.classList.add('updating');
             buildStampEl.textContent = 'RELOADING...';
           }
           setTimeout(() => {
-            window.location.reload();
-          }, 300);
+            performCleanUpdateReload(updateAvailableVersion);
+          }, 250);
         }
       });
     } catch (err) {

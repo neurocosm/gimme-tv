@@ -33,12 +33,44 @@ function cleanSmithsonianCreator(raw) {
   return cleaned;
 }
 
+function setNoStoreHeaders(res) {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+}
+
+function isHtmlNavigationRequest(req) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return false;
+  const pathname = req.path || '/';
+  if (pathname === '/' || pathname === '/index.html') return true;
+  if (pathname.startsWith('/api/') || pathname.startsWith('/@')) return false;
+  // Never serve index.html for asset paths with file extensions (e.g., .js, .css, .json, .png)
+  if (/\.[a-zA-Z0-9]+$/.test(pathname)) return false;
+  const accept = String(req.headers.accept || '');
+  return accept.includes('text/html') || accept.includes('*/*') || accept === '';
+}
+
 async function createApp() {
   const app = express();
 
+  // Never allow stale browser/proxy caching of service worker, version beacon, or HTML entry
+  app.use((req, res, next) => {
+    const p = req.path || '/';
+    if (
+      p === '/' ||
+      p === '/index.html' ||
+      p === '/sw.js' ||
+      p === '/version.json' ||
+      p.startsWith('/api/')
+    ) {
+      setNoStoreHeaders(res);
+    }
+    next();
+  });
+
   // Private server-side proxy for Smithsonian Open Access API
   app.get('/api/smithsonian', async (req, res) => {
-    res.setHeader('Cache-Control', 'no-store');
+    setNoStoreHeaders(res);
     const apiKey = process.env.SMITHSONIAN_API_KEY;
     if (!apiKey) {
       return res.json({ configured: false, items: [] });
@@ -111,12 +143,31 @@ async function createApp() {
   });
 
   if (IS_PROD) {
-    app.use(express.static(DIST_DIR));
+    app.use(
+      express.static(DIST_DIR, {
+        index: false,
+        setHeaders(res, filePath) {
+          if (
+            filePath.endsWith('index.html') ||
+            filePath.endsWith('sw.js') ||
+            filePath.endsWith('version.json')
+          ) {
+            setNoStoreHeaders(res);
+          } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        },
+      })
+    );
+
     app.get('/local_art_manifest.json', (_req, res) => {
+      setNoStoreHeaders(res);
       res.sendFile(path.join(__dirname, 'local_art_manifest.json'));
     });
+
     app.use((req, res, next) => {
-      if (req.method !== 'GET') return next();
+      if (!isHtmlNavigationRequest(req)) return next();
+      setNoStoreHeaders(res);
       res.sendFile(path.join(DIST_DIR, 'index.html'));
     });
   } else {
@@ -125,20 +176,37 @@ async function createApp() {
       server: {
         middlewareMode: true,
         hmr: false,
+        ws: false,
         allowedHosts: true,
       },
       appType: 'custom',
     });
 
+    // In dev mode, prevent browser HTTP cache from replaying stale /src/* or /style.css
+    app.use((req, res, next) => {
+      if (req.path.startsWith('/src/') || req.path === '/style.css') {
+        setNoStoreHeaders(res);
+      }
+      next();
+    });
+
     app.use(vite.middlewares);
 
     app.use(async (req, res, next) => {
-      if (req.method !== 'GET') return next();
+      if (!isHtmlNavigationRequest(req)) return next();
       try {
         const htmlPath = path.join(__dirname, 'index.html');
         let html = fs.readFileSync(htmlPath, 'utf-8');
         html = await vite.transformIndexHtml(req.originalUrl, html);
-        res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
+        // Strip Vite's HMR client script completely since HMR is disabled (prevents port 24678 WS reload loops)
+        html = html.replace(/<script\s+type="module"\s+src="\/@vite\/client"><\/script>\s*/gi, '');
+        setNoStoreHeaders(res);
+        res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' });
+        if (req.method === 'HEAD') {
+          res.end();
+        } else {
+          res.end(html);
+        }
       } catch (e) {
         next(e);
       }
