@@ -1,24 +1,27 @@
 /**
  * Gimme TV — Three.js Multi-Layer Generative Dreamscape Engine
- * Combines full-screen morphing GLSL shader worlds (Julia Fractals, Sacred Kaleidoscopes,
- * Luminous Stained Glass, Cosmic Nebulae/Supernovas, Underwater Caustics) with true 3D
- * translucent Three.js worlds (Sacred Geometry Tunnels, Procedural Ringed Exoplanets,
- * Underwater Bioluminescence, Supernova Accretion Vortex) driven by rotating Cosine Palettes.
- *
- * Meditative lava-lamp pacing (~2.5 minutes per full morph, ~4.5 minutes per palette rotation).
+ * Combines 8 full-screen morphing GLSL shader worlds (Julia Fractals, Sacred Kaleidoscopes,
+ * Luminous Stained Glass, Cosmic Nebulae/Supernovas, Underwater Caustics, Silk Aurora Curtains,
+ * Liquid Oil/Iridescent Mercury, Prism Crystal Geode) with 6 translucent 3D foreground modes
+ * (Sacred Geometry Tunnels, Ringed Exoplanet fly-by, Underwater Bioluminescence Reef,
+ * Supernova Accretion Vortex, Celestial Crystal Orrery, and Open Vista) plus independent
+ * Slow Time-Warp Starfield & Underwater Bubble/Wave FX layers, anti-repeat variety director,
+ * 12 contrasting Cosine Color Palettes, and silent automatic dynamic resolution scaling.
  */
 
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-// Rotating poetic mode names requested by user
+// Rotating poetic mode names
 const MODE_NAMES = ['AETHER', 'LUCID', 'PRISM', 'REVERIE', 'DRIFT'];
 
-// 6 Curated Rotating Cosine Color Palettes: color(t) = a + b * cos(2π(c * t + d))
+// 12 Contrasting Curated Cosine Color Palettes across 6 distinct hue families
+// color(t) = a + b * cos(2π(c * t + d))
 const PALETTES = [
   {
     name: 'James Webb',
     mood: 'Astral',
+    family: 'astral',
     a: new THREE.Vector3(0.18, 0.16, 0.28),
     b: new THREE.Vector3(0.45, 0.36, 0.44),
     c: new THREE.Vector3(1.0, 0.9, 0.85),
@@ -29,102 +32,191 @@ const PALETTES = [
     fog: new THREE.Color('#070914'),
   },
   {
-    name: 'Bioluminescent Abyss',
-    mood: 'Abyssal',
-    a: new THREE.Vector3(0.06, 0.22, 0.32),
-    b: new THREE.Vector3(0.24, 0.44, 0.48),
-    c: new THREE.Vector3(0.9, 1.0, 0.95),
-    d: new THREE.Vector3(0.48, 0.14, 0.24),
-    key: new THREE.Color('#4fffe0'),
-    rim: new THREE.Color('#7c6cff'),
-    accent: new THREE.Color('#14b8a6'),
-    fog: new THREE.Color('#030d18'),
-  },
-  {
-    name: 'Cathedral Amethyst',
-    mood: 'Velvet',
-    a: new THREE.Vector3(0.24, 0.12, 0.28),
-    b: new THREE.Vector3(0.44, 0.32, 0.42),
-    c: new THREE.Vector3(1.0, 0.85, 1.0),
-    d: new THREE.Vector3(0.86, 0.18, 0.42),
-    key: new THREE.Color('#f7b2d9'),
-    rim: new THREE.Color('#c084fc'),
-    accent: new THREE.Color('#f59e0b'),
-    fog: new THREE.Color('#0f0618'),
-  },
-  {
     name: 'Molten Corona',
     mood: 'Solar',
-    a: new THREE.Vector3(0.28, 0.12, 0.10),
-    b: new THREE.Vector3(0.50, 0.34, 0.24),
+    family: 'warm',
+    a: new THREE.Vector3(0.30, 0.12, 0.08),
+    b: new THREE.Vector3(0.50, 0.34, 0.22),
     c: new THREE.Vector3(1.0, 0.9, 0.75),
     d: new THREE.Vector3(0.02, 0.16, 0.36),
     key: new THREE.Color('#ffbe76'),
     rim: new THREE.Color('#ff5e57'),
     accent: new THREE.Color('#f9ca24'),
-    fog: new THREE.Color('#120608'),
+    fog: new THREE.Color('#140608'),
+  },
+  {
+    name: 'Bioluminescent Abyss',
+    mood: 'Abyssal',
+    family: 'abyssal',
+    a: new THREE.Vector3(0.05, 0.22, 0.32),
+    b: new THREE.Vector3(0.22, 0.44, 0.48),
+    c: new THREE.Vector3(0.9, 1.0, 0.95),
+    d: new THREE.Vector3(0.48, 0.14, 0.24),
+    key: new THREE.Color('#4fffe0'),
+    rim: new THREE.Color('#38bdf8'),
+    accent: new THREE.Color('#14b8a6'),
+    fog: new THREE.Color('#030d18'),
+  },
+  {
+    name: 'Emerald Canopy',
+    mood: 'Verdant',
+    family: 'botanical',
+    a: new THREE.Vector3(0.08, 0.26, 0.16),
+    b: new THREE.Vector3(0.28, 0.46, 0.30),
+    c: new THREE.Vector3(0.85, 1.0, 0.8),
+    d: new THREE.Vector3(0.28, 0.06, 0.42),
+    key: new THREE.Color('#86efac'),
+    rim: new THREE.Color('#fde047'),
+    accent: new THREE.Color('#10b981'),
+    fog: new THREE.Color('#04120c'),
+  },
+  {
+    name: 'Cathedral Amethyst',
+    mood: 'Velvet',
+    family: 'royal',
+    a: new THREE.Vector3(0.26, 0.11, 0.28),
+    b: new THREE.Vector3(0.44, 0.30, 0.42),
+    c: new THREE.Vector3(1.0, 0.85, 1.0),
+    d: new THREE.Vector3(0.86, 0.18, 0.42),
+    key: new THREE.Color('#f7b2d9'),
+    rim: new THREE.Color('#c084fc'),
+    accent: new THREE.Color('#f59e0b'),
+    fog: new THREE.Color('#100618'),
+  },
+  {
+    name: 'Copper & Verdigris',
+    mood: 'Patina',
+    family: 'mineral',
+    a: new THREE.Vector3(0.22, 0.20, 0.18),
+    b: new THREE.Vector3(0.42, 0.36, 0.32),
+    c: new THREE.Vector3(0.95, 0.85, 0.9),
+    d: new THREE.Vector3(0.05, 0.38, 0.52),
+    key: new THREE.Color('#f59e6c'),
+    rim: new THREE.Color('#2dd4bf'),
+    accent: new THREE.Color('#d97706'),
+    fog: new THREE.Color('#0b1012'),
+  },
+  {
+    name: 'Sakura Pearl',
+    mood: 'Blossom',
+    family: 'royal',
+    a: new THREE.Vector3(0.32, 0.18, 0.24),
+    b: new THREE.Vector3(0.42, 0.34, 0.36),
+    c: new THREE.Vector3(0.9, 0.85, 0.95),
+    d: new THREE.Vector3(0.94, 0.22, 0.34),
+    key: new THREE.Color('#fbcfe8'),
+    rim: new THREE.Color('#fde68a'),
+    accent: new THREE.Color('#f472b6'),
+    fog: new THREE.Color('#160a12'),
   },
   {
     name: 'Boreal Aurora',
     mood: 'Boreal',
-    a: new THREE.Vector3(0.09, 0.24, 0.28),
-    b: new THREE.Vector3(0.28, 0.46, 0.45),
+    family: 'botanical',
+    a: new THREE.Vector3(0.08, 0.25, 0.26),
+    b: new THREE.Vector3(0.28, 0.48, 0.44),
     c: new THREE.Vector3(0.95, 1.0, 1.1),
     d: new THREE.Vector3(0.32, 0.08, 0.52),
     key: new THREE.Color('#6ee7b7'),
     rim: new THREE.Color('#818cf8'),
-    accent: new THREE.Color('#38bdf8'),
-    fog: new THREE.Color('#05101a'),
+    accent: new THREE.Color('#34d399'),
+    fog: new THREE.Color('#041118'),
+  },
+  {
+    name: 'Desert Terracotta',
+    mood: 'Ochre',
+    family: 'warm',
+    a: new THREE.Vector3(0.32, 0.16, 0.12),
+    b: new THREE.Vector3(0.44, 0.32, 0.26),
+    c: new THREE.Vector3(0.9, 0.85, 0.8),
+    d: new THREE.Vector3(0.04, 0.22, 0.44),
+    key: new THREE.Color('#fdba74'),
+    rim: new THREE.Color('#fb7185'),
+    accent: new THREE.Color('#ea580c'),
+    fog: new THREE.Color('#160a08'),
+  },
+  {
+    name: 'Gilded Obsidian',
+    mood: 'Gilded',
+    family: 'mineral',
+    a: new THREE.Vector3(0.24, 0.19, 0.11),
+    b: new THREE.Vector3(0.46, 0.38, 0.22),
+    c: new THREE.Vector3(1.0, 0.92, 0.78),
+    d: new THREE.Vector3(0.06, 0.14, 0.32),
+    key: new THREE.Color('#fde68a'),
+    rim: new THREE.Color('#f59e0b'),
+    accent: new THREE.Color('#fef3c7'),
+    fog: new THREE.Color('#0c0905'),
+  },
+  {
+    name: 'Pelagic Indigo',
+    mood: 'Pelagic',
+    family: 'abyssal',
+    a: new THREE.Vector3(0.08, 0.16, 0.32),
+    b: new THREE.Vector3(0.26, 0.38, 0.48),
+    c: new THREE.Vector3(1.0, 0.95, 0.9),
+    d: new THREE.Vector3(0.55, 0.24, 0.10),
+    key: new THREE.Color('#7dd3fc'),
+    rim: new THREE.Color('#a78bfa'),
+    accent: new THREE.Color('#0ea5e9'),
+    fog: new THREE.Color('#040918'),
   },
   {
     name: 'Opaline Glass',
     mood: 'Opaline',
+    family: 'astral',
     a: new THREE.Vector3(0.22, 0.22, 0.30),
     b: new THREE.Vector3(0.38, 0.36, 0.42),
     c: new THREE.Vector3(1.0, 1.0, 1.0),
     d: new THREE.Vector3(0.0, 0.33, 0.67),
-    key: new THREE.Color('#fbcfe8'),
-    rim: new THREE.Color('#7dd3fc'),
+    key: new THREE.Color('#f5d0fe'),
+    rim: new THREE.Color('#67e8f9'),
     accent: new THREE.Color('#c4b5fd'),
     fog: new THREE.Color('#090b16'),
   },
 ];
 
-// Shader Layer 1 Worlds (0..4)
+// Layer 1 Full-Screen Procedural Shader Worlds (0..7)
 const SHADER_WORLDS = [
-  { id: 0, key: 'julia', noun: 'Filament' },
-  { id: 1, key: 'kaleidoscope', noun: 'Mandala' },
-  { id: 2, key: 'stainedGlass', noun: 'Cathedral' },
-  { id: 3, key: 'nebula', noun: 'Supernova' },
-  { id: 4, key: 'caustics', noun: 'Caustics' },
+  { id: 0, key: 'julia', noun: 'Filament', aquatic: false },
+  { id: 1, key: 'kaleidoscope', noun: 'Mandala', aquatic: false },
+  { id: 2, key: 'stainedGlass', noun: 'Cathedral', aquatic: false },
+  { id: 3, key: 'nebula', noun: 'Supernova', aquatic: false },
+  { id: 4, key: 'caustics', noun: 'Caustics', aquatic: true },
+  { id: 5, key: 'aurora', noun: 'Aurora', aquatic: false },
+  { id: 6, key: 'liquidOil', noun: 'Mirage', aquatic: false },
+  { id: 7, key: 'prismGeode', noun: 'Prism', aquatic: false },
 ];
 
-// 3D Layer 2 Worlds (0..3)
+// Layer 2 Translucent 3D Worlds (0..5, where 5 is Open Vista — unobstructed pure backdrop)
 const THREE_WORLDS = [
-  { id: 0, key: 'tunnel', noun: 'Sanctuary' },
-  { id: 1, key: 'planet', noun: 'Horizon' },
-  { id: 2, key: 'biolum', noun: 'Reef' },
-  { id: 3, key: 'supernova', noun: 'Singularity' },
+  { id: 0, key: 'tunnel', noun: 'Sanctuary', aquatic: false },
+  { id: 1, key: 'planet', noun: 'Horizon', aquatic: false },
+  { id: 2, key: 'biolum', noun: 'Reef', aquatic: true },
+  { id: 3, key: 'supernova', noun: 'Singularity', aquatic: false },
+  { id: 4, key: 'orrery', noun: 'Orrery', aquatic: false },
+  { id: 5, key: 'openVista', noun: 'Expanse', aquatic: false },
 ];
 
-// Curated morph pairings so shader backdrop & 3D foreground harmonize cinematically
-const WORLD_JOURNEY = [
-  { shader: 3, world3d: 1, twist: 0.10, kaleido: 0.0 }, // Nebula + Ringed Exoplanet
-  { shader: 1, world3d: 0, twist: 0.28, kaleido: 1.0 }, // Kaleidoscope + Sacred Geometry Tunnel
-  { shader: 4, world3d: 2, twist: 0.14, kaleido: 0.0 }, // Underwater Caustics + Bioluminescence
-  { shader: 2, world3d: 0, twist: 0.20, kaleido: 0.35 }, // Stained Glass + Sacred Geometry Tunnel
-  { shader: 0, world3d: 3, twist: 0.32, kaleido: 0.15 }, // Silk Julia Fractal + Supernova Vortex
-  { shader: 3, world3d: 2, twist: 0.16, kaleido: 0.0 }, // Nebula + Bioluminescent Drift
-  { shader: 2, world3d: 1, twist: 0.12, kaleido: 0.25 }, // Stained Glass + Ringed Exoplanet
-  { shader: 0, world3d: 0, twist: 0.30, kaleido: 0.65 }, // Julia Fractal + Sacred Geometry Tunnel
-  { shader: 1, world3d: 3, twist: 0.36, kaleido: 0.85 }, // Kaleidoscope + Supernova Vortex
-];
+// Harmonious 3D pairings per shader world (variety director selects dynamically with anti-repeat)
+const SHADER_AFFINITY = {
+  0: [0, 3, 4, 5],       // Julia Fractal -> Tunnel, Vortex, Orrery, Open Vista
+  1: [0, 4, 3, 5],       // Kaleidoscope -> Tunnel, Orrery, Vortex, Open Vista
+  2: [0, 4, 1, 5],       // Stained Glass -> Tunnel, Orrery, Exoplanet, Open Vista
+  3: [1, 3, 4, 5],       // Cosmic Nebula -> Exoplanet, Vortex, Orrery, Open Vista
+  4: [2, 5, 0],          // Underwater Caustics -> Bioluminescence Reef, Open Vista, Gossamer Tunnel
+  5: [5, 4, 1, 0],       // Silk Aurora -> Open Vista, Orrery, Exoplanet, Tunnel
+  6: [5, 0, 4, 2],       // Liquid Oil Lava-Lamp -> Open Vista, Tunnel, Orrery, Reef
+  7: [4, 0, 5, 3],       // Prism Crystal Geode -> Orrery, Tunnel, Open Vista, Vortex
+};
 
-// Meditative lava-lamp timings
-const MORPH_CYCLE_SEC = 150.0; // 2.5 minutes per full morph evolution
-const PALETTE_CYCLE_SEC = 270.0; // 4.5 minutes per palette evolution
+// Meditative lava-lamp timings (slightly offset so worlds & color moods continually recombine)
+const MORPH_CYCLE_SEC = 142.0;    // ~2.4 minutes per full scene evolution
+const PALETTE_CYCLE_SEC = 155.0;  // ~2.6 minutes per color palette evolution
 
-// Detect software WebGL once via GPU renderer string (never user agent)
+// Silent automatic dynamic resolution tiers (smoothly scales GPU load on Smart TVs / tablets)
+const RENDER_TIERS = [0.44, 0.54, 0.66, 0.80, 1.0, 1.25, 1.5];
+
 function detectSoftwareWebGL() {
   try {
     const testCanvas = document.createElement('canvas');
@@ -160,7 +252,7 @@ function createSoftGlowTexture() {
 }
 
 // ============================================================
-// LAYER 1: FULL-SCREEN MORPHING GLSL BACKDROP SHADER
+// LAYER 1: FULL-SCREEN MORPHING GLSL BACKDROP SHADER (8 WORLDS)
 // ============================================================
 const BACKDROP_VERTEX_SHADER = `
   varying vec2 vUv;
@@ -182,6 +274,8 @@ const BACKDROP_FRAGMENT_SHADER = `
   uniform float uMorph;
   uniform float uTwist;
   uniform float uKaleido;
+  uniform float uQuality;
+  uniform float uUnderwater;
   uniform vec3 uPalA;
   uniform vec3 uPalB;
   uniform vec3 uPalC;
@@ -226,7 +320,9 @@ const BACKDROP_FRAGMENT_SHADER = `
     float v = 0.0;
     float a = 0.5;
     mat2 m = mat2(0.8, 0.6, -0.6, 0.8);
+    int oct = uQuality > 0.65 ? 5 : (uQuality > 0.30 ? 4 : 3);
     for (int i = 0; i < 5; i++) {
+      if (i >= oct) break;
       v += a * vnoise(p);
       p = m * p * 2.02 + vec2(0.13, -0.17);
       a *= 0.5;
@@ -238,13 +334,14 @@ const BACKDROP_FRAGMENT_SHADER = `
   vec3 renderJulia(vec2 p, float t) {
     vec2 z = p * (1.22 + 0.18 * sin(t * 0.09));
     z *= rot(t * 0.035);
-    // Smooth orbit along rich Julia detail boundary
-    vec2 c = vec2(-0.745, 0.186) + 0.045 * vec2(cos(t * 0.07), sin(t * 0.061));
+    vec2 c = vec2(-0.745, 0.186) + 0.048 * vec2(cos(t * 0.068), sin(t * 0.059));
     float trapMin = 10.0;
     float trapLine = 10.0;
     float iterSmooth = 0.0;
+    int maxIter = uQuality > 0.65 ? 40 : (uQuality > 0.30 ? 30 : 22);
 
-    for (int i = 0; i < 42; i++) {
+    for (int i = 0; i < 40; i++) {
+      if (i >= maxIter) break;
       z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + c;
       float r2 = dot(z, z);
       trapMin = min(trapMin, r2);
@@ -256,7 +353,7 @@ const BACKDROP_FRAGMENT_SHADER = `
       iterSmooth = float(i);
     }
 
-    float n = iterSmooth / 42.0;
+    float n = iterSmooth / float(maxIter);
     float glow = exp(-2.8 * sqrt(trapMin));
     float silk = exp(-6.5 * trapLine);
     vec3 col = palette(n * 1.45 + t * 0.025 + glow * 0.45);
@@ -292,7 +389,6 @@ const BACKDROP_FRAGMENT_SHADER = `
   vec3 renderStainedGlass(vec2 p, float t) {
     vec2 q = p * rot(t * 0.018);
     float r = length(q);
-    // Gentle rose-window radial symmetry blend
     float a = atan(q.y, q.x);
     float fold = TAU / 8.0;
     vec2 rose = vec2(cos(abs(mod(a + PI, fold) - fold * 0.5)), sin(abs(mod(a + PI, fold) - fold * 0.5))) * r;
@@ -330,13 +426,10 @@ const BACKDROP_FRAGMENT_SHADER = `
     float glassLight = 0.55 + 0.45 * sin(md1 * 5.0 - t * 0.2 + cellId * TAU);
 
     vec3 glassCol = palette(cellId * 1.15 + r * 0.25 + t * 0.022);
-    // Internal prismatic shimmer
     float shimmer = fbm(uv * 1.8 + vec2(t * 0.06, -t * 0.04));
     glassCol *= (0.55 + 0.72 * glassLight * (0.7 + 0.5 * shimmer));
     glassCol += palette(cellId + 0.5) * bevelGlow;
-    // Dark molten-lead stained glass divider
     vec3 col = mix(vec3(0.02, 0.02, 0.04), glassCol, leadLine);
-    // Subtle cathedral backlight bloom
     col *= (0.7 + 0.55 * exp(-r * 0.95));
     return col * 0.88;
   }
@@ -346,7 +439,6 @@ const BACKDROP_FRAGMENT_SHADER = `
     vec2 q = p * rot(t * 0.015);
     float r = length(q);
 
-    // Multi-pass domain warping for lush volumetric clouds
     vec2 warp1 = vec2(
       fbm(q * 1.45 + vec2(t * 0.024, -t * 0.018)),
       fbm(q * 1.45 + vec2(-t * 0.02, t * 0.026) + 5.2)
@@ -357,7 +449,6 @@ const BACKDROP_FRAGMENT_SHADER = `
     );
     float cloud = fbm(q * 1.8 + warp2 * 1.65);
 
-    // Expanding luminous supernova shockwave ring
     float wavePhase = fract(t * 0.018);
     float waveR = wavePhase * 1.75;
     float shock = exp(-pow((r - waveR) * 8.5, 2.0)) * (1.0 - wavePhase) * (0.5 + 0.8 * cloud);
@@ -368,7 +459,6 @@ const BACKDROP_FRAGMENT_SHADER = `
     col += palette(warp1.y + 0.35) * shock * 0.9;
     col += palette(0.15 + t * 0.02) * core * 0.72;
 
-    // Subtle deep-field pinprick stars inside nebula
     vec2 sg = floor(q * 28.0);
     vec2 sf = fract(q * 28.0) - 0.5;
     float rnd = hash21(sg);
@@ -381,29 +471,142 @@ const BACKDROP_FRAGMENT_SHADER = `
     return col;
   }
 
-  // World 4: Underwater Bioluminescent Caustics
+  // World 4: Underwater Bioluminescent Caustics & Ocean Wave Current
   vec3 renderCaustics(vec2 p, float t) {
-    vec2 q = p * 1.35;
-    q.y -= t * 0.022;
-    vec2 drift = vec2(sin(t * 0.05) * 0.3, cos(t * 0.04) * 0.2);
+    // Gentle undulating ocean wave swell across the water column
+    vec2 waveOffset = vec2(
+      sin(p.y * 2.6 + t * 0.36) * 0.045 + cos(p.x * 1.8 - t * 0.24) * 0.025,
+      cos(p.x * 2.2 + t * 0.30) * 0.035
+    );
+    vec2 q = (p + waveOffset) * 1.32;
+    q.y -= t * 0.024;
+    vec2 drift = vec2(sin(t * 0.05) * 0.34, cos(t * 0.04) * 0.22);
 
-    // Two interfering liquid caustic layers
-    vec2 c1 = q * 2.4 + drift;
-    vec2 c2 = (q * rot(0.52)) * 2.9 - drift * 1.2;
+    vec2 c1 = q * 2.35 + drift;
+    vec2 c2 = (q * rot(0.52)) * 2.85 - drift * 1.18;
 
-    float w1 = fbm(c1 + vec2(fbm(c1 + t * 0.06), fbm(c1 - t * 0.05)));
-    float w2 = fbm(c2 + vec2(fbm(c2 - t * 0.055), fbm(c2 + t * 0.048)));
+    float w1 = fbm(c1 + vec2(fbm(c1 + t * 0.065), fbm(c1 - t * 0.052)));
+    float w2 = fbm(c2 + vec2(fbm(c2 - t * 0.058), fbm(c2 + t * 0.048)));
     float caustic = pow(1.0 - abs(w1 - w2) * 1.9, 5.0);
-    float deepWater = fbm(q * 1.2 + vec2(0.0, t * 0.03));
+    float deepWater = fbm(q * 1.15 + vec2(0.0, t * 0.032));
 
-    // Soft descending sun/bioluminescent god-rays
-    float rays = pow(0.5 + 0.5 * sin(p.x * 5.0 + p.y * 1.4 + fbm(p * 1.5 + t * 0.04) * 3.5), 4.0);
-    rays *= smoothstep(-0.9, 0.95, p.y);
+    // Swaying sunbeams / underwater light shafts filtering from the surface
+    float rayAngle = p.x * 4.4 + p.y * 1.35 + sin(t * 0.14) * 0.85;
+    float rays = pow(0.5 + 0.5 * sin(rayAngle + fbm(p * 1.4 + t * 0.045) * 3.4), 4.0);
+    rays *= smoothstep(-0.95, 0.98, p.y);
 
-    vec3 abyss = palette(0.68 + deepWater * 0.35 + t * 0.012) * (0.28 + 0.38 * deepWater);
-    vec3 web = palette(0.22 + caustic * 0.45 + t * 0.018) * caustic * 0.95;
-    vec3 rayCol = palette(0.4 + t * 0.015) * rays * 0.32;
+    // Subtle ocean-surface shimmer band near top edge
+    float surfaceGlow = exp(-pow((1.05 - p.y) * 2.2, 2.0)) * (0.35 + 0.65 * caustic);
+
+    vec3 abyss = palette(0.68 + deepWater * 0.35 + t * 0.012) * (0.26 + 0.40 * deepWater);
+    vec3 web = palette(0.22 + caustic * 0.45 + t * 0.018) * caustic * 0.96;
+    vec3 rayCol = palette(0.40 + t * 0.015) * (rays * 0.38 + surfaceGlow * 0.45);
     return abyss + web + rayCol;
+  }
+
+  // World 5: Silk Aurora Curtains (swaying vertical northern light ribbons)
+  vec3 renderAurora(vec2 p, float t) {
+    vec3 col = palette(0.75 + p.y * 0.18 + t * 0.008) * (0.14 + 0.16 * smoothstep(-1.0, 0.9, p.y));
+
+    // Three layered translucent swaying aurora curtains
+    for (int i = 0; i < 3; i++) {
+      float fi = float(i);
+      float xFlow = p.x * (1.25 + fi * 0.38) + sin(t * 0.055 + fi * 2.1) * 0.45;
+      float ribbonCurve = sin(xFlow * 1.9 + t * (0.11 + fi * 0.025)) * 0.28
+        + cos(xFlow * 0.85 - t * 0.07 + fi) * 0.18;
+      float yRel = (p.y - ribbonCurve + 0.12 - fi * 0.16);
+
+      // Vertical striated aurora folds
+      float fold = fbm(vec2(xFlow * 2.6 + t * 0.04, yRel * 0.65 - t * 0.025));
+      float curtain = exp(-abs(yRel - fold * 0.32) * (3.6 + fi * 0.7));
+      // Soft upward fade like real upper-atmosphere emission
+      float upwardTrail = smoothstep(-0.45, 0.25, yRel) * exp(-max(yRel, 0.0) * 1.45);
+      float shimmer = 0.55 + 0.45 * sin(xFlow * 11.0 + fold * 7.0 - t * 0.35);
+
+      vec3 ribbonCol = palette(0.18 + fi * 0.27 + fold * 0.55 + yRel * 0.35 + t * 0.02);
+      col += ribbonCol * (curtain * 0.55 + upwardTrail * fold * 0.42) * shimmer * (0.72 - fi * 0.12);
+    }
+
+    // Quiet horizon mist reflection
+    float horizon = exp(-pow((p.y + 0.82) * 3.0, 2.0));
+    col += palette(0.35 + t * 0.015) * horizon * 0.22;
+    return col * 0.92;
+  }
+
+  // World 6: Liquid Oil & Iridescent Mercury (psychedelic lava-lamp fluid eddies)
+  vec3 renderLiquidOil(vec2 p, float t) {
+    vec2 q = p * 1.18;
+    // Deep slow fluid domain advection
+    vec2 v1 = vec2(
+      fbm(q * 1.35 + vec2(t * 0.032, -t * 0.024)),
+      fbm(q * 1.35 + vec2(-t * 0.028, t * 0.034) + 3.7)
+    );
+    vec2 v2 = vec2(
+      fbm(q * 1.9 + v1 * 2.4 + vec2(t * 0.02, 5.1)),
+      fbm(q * 1.9 + v1 * 2.4 + vec2(8.4, -t * 0.022))
+    );
+    float pool = fbm(q * 1.65 + v2 * 2.2);
+
+    // Iridescent oil-film contour interference fringes + liquid specular ridges
+    float contour = 0.5 + 0.5 * sin(pool * 13.5 + v1.x * 5.0 - t * 0.18);
+    float ridge = pow(smoothstep(0.45, 0.96, contour), 3.0);
+    float sheen = pow(max(0.0, 1.0 - abs(v2.x - v2.y) * 2.8), 4.0);
+
+    vec3 base = palette(pool * 1.55 + v1.y * 0.55 + t * 0.024);
+    vec3 irid = palette(pool * 2.2 + 0.42 + v2.x * 0.5);
+    vec3 col = base * (0.44 + 0.62 * contour) + irid * (ridge * 0.42 + sheen * 0.58);
+    return col * 0.86;
+  }
+
+  // World 7: Prism Crystal Geode (faceted crystalline light refraction)
+  vec3 renderPrismGeode(vec2 p, float t) {
+    vec2 q = p * rot(t * 0.014) * 2.35;
+    q += vec2(sin(t * 0.035) * 0.35, cos(t * 0.03) * 0.35);
+
+    vec2 n = floor(q);
+    vec2 f = fract(q);
+    float md1 = 8.0;
+    float md2 = 8.0;
+    vec2 bestVec = vec2(0.0);
+    vec2 bestCell = vec2(0.0);
+
+    for (int j = -1; j <= 1; j++) {
+      for (int i = -1; i <= 1; i++) {
+        vec2 g = vec2(float(i), float(j));
+        vec2 o = hash22(n + g);
+        o = 0.5 + 0.38 * sin(t * 0.11 + TAU * o);
+        vec2 diff = g + o - f;
+        float d = dot(diff, diff);
+        if (d < md1) {
+          md2 = md1;
+          md1 = d;
+          bestVec = diff;
+          bestCell = n + g;
+        } else if (d < md2) {
+          md2 = d;
+        }
+      }
+    }
+
+    float d1 = sqrt(md1);
+    float d2 = sqrt(md2);
+    float facetEdge = d2 - d1;
+    float cellId = hash21(bestCell);
+
+    // Simulated crystal facet normal + sweeping prism beam
+    vec2 facetN = normalize(bestVec + vec2(0.0001));
+    vec2 beamDir = vec2(cos(t * 0.16), sin(t * 0.13));
+    float spec = pow(max(0.0, dot(facetN, beamDir)), 3.2);
+    float edgeHighlight = exp(-facetEdge * 18.0);
+
+    // Chromatic prism shift across facets
+    vec3 facetCol = palette(cellId * 1.4 + dot(facetN, vec2(0.5, 0.8)) * 0.25 + t * 0.02);
+    vec3 prismSpark = palette(cellId + spec * 0.65 + 0.33);
+    vec3 col = facetCol * (0.42 + 0.58 * (1.0 - d1 * 0.65))
+      + prismSpark * (spec * 0.68 + edgeHighlight * 0.52);
+
+    float depthVignette = smoothstep(2.1, 0.2, length(p));
+    return col * (0.62 + 0.45 * depthVignette) * 0.86;
   }
 
   vec3 sampleWorld(float id, vec2 p, float t) {
@@ -411,12 +614,21 @@ const BACKDROP_FRAGMENT_SHADER = `
     if (id < 1.5) return renderKaleidoscope(p, t);
     if (id < 2.5) return renderStainedGlass(p, t);
     if (id < 3.5) return renderNebula(p, t);
-    return renderCaustics(p, t);
+    if (id < 4.5) return renderCaustics(p, t);
+    if (id < 5.5) return renderAurora(p, t);
+    if (id < 6.5) return renderLiquidOil(p, t);
+    return renderPrismGeode(p, t);
   }
 
   void main() {
     vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
     vec2 p = (vUv - 0.5) * 2.0 * aspect;
+
+    // Gentle liquid underwater wave sway when aquatic atmosphere is active
+    if (uUnderwater > 0.01) {
+      p.x += sin(p.y * 2.8 + uTime * 0.48) * 0.028 * uUnderwater;
+      p.y += cos(p.x * 2.3 - uTime * 0.38) * 0.020 * uUnderwater;
+    }
 
     // Gentle global lava-lamp swirl + optional radial kaleidoscope warp
     float dist = length(p);
@@ -428,27 +640,33 @@ const BACKDROP_FRAGMENT_SHADER = `
       float seg = TAU / 8.0;
       float fa = abs(mod(a + PI, seg) - seg * 0.5);
       vec2 kp = vec2(cos(fa), sin(fa)) * length(wp);
-      wp = mix(wp, kp, uKaleido * 0.38);
+      wp = mix(wp, kp, uKaleido * 0.36);
     }
 
-    vec3 colA = sampleWorld(uSceneA, wp, uTime);
-    vec3 colB = sampleWorld(uSceneB, wp, uTime);
+    // Performance guardrail: skip sampling dormant world near endpoints (saves ~50% GPU at rest)
+    vec3 color;
+    if (uMorph < 0.004) {
+      color = sampleWorld(uSceneA, wp, uTime);
+    } else if (uMorph > 0.996) {
+      color = sampleWorld(uSceneB, wp, uTime);
+    } else {
+      vec3 colA = sampleWorld(uSceneA, wp, uTime);
+      vec3 colB = sampleWorld(uSceneB, wp, uTime);
 
-    // Organic noise-driven luminance dissolve (cunning semi-transparent bleed, never flat crossfade)
-    float maskNoise = fbm(p * 1.45 + vec2(uTime * 0.025, -uTime * 0.02));
-    float lumB = dot(colB, vec3(0.299, 0.587, 0.114));
-    float dissolve = smoothstep(
-      uMorph * 1.45 - 0.45,
-      uMorph * 1.45 + 0.10,
-      maskNoise * 0.72 + lumB * 0.28
-    );
-    float blendW = 1.0 - dissolve;
+      float maskNoise = fbm(p * 1.45 + vec2(uTime * 0.025, -uTime * 0.02));
+      float lumB = dot(colB, vec3(0.299, 0.587, 0.114));
+      float dissolve = smoothstep(
+        uMorph * 1.45 - 0.45,
+        uMorph * 1.45 + 0.10,
+        maskNoise * 0.72 + lumB * 0.28
+      );
+      float blendW = 1.0 - dissolve;
 
-    // Combine with subtle semi-transparent screen overlap during mid-morph
-    vec3 baseMix = mix(colA, colB, blendW);
-    float overlapAmt = sin(clamp(uMorph, 0.0, 1.0) * PI);
-    vec3 screenBlend = 1.0 - (1.0 - colA * 0.85) * (1.0 - colB * 0.85);
-    vec3 color = mix(baseMix, screenBlend, overlapAmt * 0.42);
+      vec3 baseMix = mix(colA, colB, blendW);
+      float overlapAmt = sin(clamp(uMorph, 0.0, 1.0) * PI);
+      vec3 screenBlend = 1.0 - (1.0 - colA * 0.85) * (1.0 - colB * 0.85);
+      color = mix(baseMix, screenBlend, overlapAmt * 0.42);
+    }
 
     // Subtle breathing cinema vignette
     float vig = smoothstep(2.05, 0.35, dist);
@@ -463,7 +681,7 @@ const BACKDROP_FRAGMENT_SHADER = `
 `;
 
 // ============================================================
-// PROCEDURAL GAS GIANT PLANET SHADER (for 3D Exoplanet World)
+// CUSTOM 3D SHADERS (Planet, Rings, Fresnel, Ethereal Polygons, Bubbles, Ribbons)
 // ============================================================
 const PLANET_VERTEX_SHADER = `
   varying vec3 vNormal;
@@ -525,7 +743,6 @@ const PLANET_FRAGMENT_SHADER = `
     vec3 v = normalize(vViewPos);
     vec3 lightDir = normalize(vec3(-0.75, 0.45, 0.65));
 
-    // Swirling atmospheric zonal bands
     float swirl = fbm3(vLocalPos * 3.2 + vec3(uTime * 0.04, 0.0, -uTime * 0.03));
     float bands = sin(vLocalPos.y * 14.0 + swirl * 4.2) * 0.5 + 0.5;
     float fine = fbm3(vLocalPos * 7.0 + vec3(swirl * 2.0, uTime * 0.02, 0.0));
@@ -541,7 +758,6 @@ const PLANET_FRAGMENT_SHADER = `
   }
 `;
 
-// Planetary Ring Shader (multi-band Cassini divisions)
 const RING_VERTEX_SHADER = `
   varying vec2 vUv;
   void main() {
@@ -565,7 +781,7 @@ const RING_FRAGMENT_SHADER = `
 
     float t = (r - 0.46) / 0.54;
     float fineBands = 0.5 + 0.5 * sin(t * 58.0 + sin(t * 14.0) * 1.5);
-    float cassiniGap = 1.0 - smoothstep(0.0, 0.045, abs(t - 0.62)) * 0.0 + smoothstep(0.02, 0.06, abs(t - 0.62));
+    float cassiniGap = smoothstep(0.02, 0.06, abs(t - 0.62));
     float edgeFade = smoothstep(0.0, 0.12, t) * smoothstep(1.0, 0.82, t);
     float angle = atan(centered.y, centered.x);
     float shimmer = 0.8 + 0.2 * sin(angle * 3.0 + uTime * 0.15);
@@ -576,7 +792,6 @@ const RING_FRAGMENT_SHADER = `
   }
 `;
 
-// Fresnel Translucent Glow Shader (for planet atmosphere halo & jellyfish bells)
 const FRESNEL_VERTEX_SHADER = `
   varying vec3 vNormal;
   varying vec3 vViewPos;
@@ -617,7 +832,6 @@ const FRESNEL_FRAGMENT_SHADER = `
   }
 `;
 
-// Ethereal Depth-Faded Gossamer Polygon Shader (for Sacred Geometry Rings)
 const ETHEREAL_POLY_VERTEX_SHADER = `
   varying vec3 vNormal;
   varying vec3 vViewPos;
@@ -643,7 +857,6 @@ const ETHEREAL_POLY_FRAGMENT_SHADER = `
     vec3 n = normalize(vNormal);
     vec3 v = normalize(vViewPos);
     float fres = pow(1.0 - abs(dot(n, v)), 1.55);
-    // Smoothly materialize in the far mist and dissolve gently before reaching the camera
     float farFade = smoothstep(64.0, 24.0, vViewDist);
     float nearFade = smoothstep(2.4, 11.8, vViewDist);
     float depthFade = farFade * nearFade;
@@ -653,7 +866,6 @@ const ETHEREAL_POLY_FRAGMENT_SHADER = `
   }
 `;
 
-// Depth-Faded Ethereal Wireframe Line Shader (for Crystal Polyhedral Filigree)
 const ETHEREAL_LINE_VERTEX_SHADER = `
   varying float vViewDist;
   void main() {
@@ -676,6 +888,85 @@ const ETHEREAL_LINE_FRAGMENT_SHADER = `
   }
 `;
 
+// Translucent Glassy Underwater Bubble Shader (InstancedMesh compatible)
+const BUBBLE_VERTEX_SHADER = `
+  varying vec3 vNormal;
+  varying vec3 vViewPos;
+  varying float vViewDist;
+  void main() {
+    vec4 localPos = vec4(position, 1.0);
+    vec3 localNormal = normal;
+    #ifdef USE_INSTANCING
+      localPos = instanceMatrix * localPos;
+      localNormal = mat3(instanceMatrix) * localNormal;
+    #endif
+    vNormal = normalize(normalMatrix * localNormal);
+    vec4 mvPos = modelViewMatrix * localPos;
+    vViewPos = -mvPos.xyz;
+    vViewDist = -mvPos.z;
+    gl_Position = projectionMatrix * mvPos;
+  }
+`;
+
+const BUBBLE_FRAGMENT_SHADER = `
+  precision highp float;
+  varying vec3 vNormal;
+  varying vec3 vViewPos;
+  varying float vViewDist;
+  uniform vec3 uColorA;
+  uniform vec3 uColorB;
+  uniform float uOpacity;
+  void main() {
+    vec3 n = normalize(vNormal);
+    vec3 v = normalize(vViewPos);
+    float ndv = max(dot(n, v), 0.0);
+    // Crisp glassy soap-bubble rim + delicate top-left specular crescent
+    float rim = pow(1.0 - ndv, 2.75);
+    vec3 lightDir = normalize(vec3(-0.45, 0.78, 0.55));
+    vec3 halfVec = normalize(lightDir + v);
+    float spec = pow(max(dot(n, halfVec), 0.0), 26.0);
+    float depthFade = smoothstep(32.0, 12.0, vViewDist) * smoothstep(1.2, 4.2, vViewDist);
+
+    vec3 col = mix(uColorA, uColorB, rim * 0.75) * (0.85 + 0.65 * rim) + vec3(0.95, 0.99, 1.0) * spec * 1.15;
+    float alpha = clamp((rim * 0.72 + spec * 0.85 + 0.04) * depthFade * uOpacity, 0.0, 0.92);
+    gl_FragColor = vec4(col, alpha);
+  }
+`;
+
+// Ethereal Swaying Underwater Light Curtain / Kelp Ribbon Shader
+const ABYSS_RIBBON_VERTEX_SHADER = `
+  varying vec2 vUv;
+  uniform float uTime;
+  uniform float uPhase;
+  void main() {
+    vUv = uv;
+    vec3 pos = position;
+    float sway = sin(pos.y * 0.45 + uTime * 0.42 + uPhase) * 0.65
+      + cos(pos.y * 0.85 - uTime * 0.28 + uPhase * 1.7) * 0.28;
+    pos.x += sway * (0.3 + uv.y * 0.9);
+    pos.z += cos(pos.y * 0.5 + uTime * 0.35 + uPhase) * 0.45;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+  }
+`;
+
+const ABYSS_RIBBON_FRAGMENT_SHADER = `
+  precision highp float;
+  varying vec2 vUv;
+  uniform vec3 uColorA;
+  uniform vec3 uColorB;
+  uniform float uOpacity;
+  uniform float uTime;
+  uniform float uPhase;
+  void main() {
+    float edgeX = sin(vUv.x * 3.14159265);
+    float edgeY = smoothstep(0.0, 0.22, vUv.y) * smoothstep(1.0, 0.72, vUv.y);
+    float veins = 0.55 + 0.45 * sin(vUv.x * 16.0 + vUv.y * 8.0 - uTime * 0.5 + uPhase);
+    vec3 col = mix(uColorA, uColorB, vUv.y);
+    float alpha = pow(edgeX, 1.8) * edgeY * veins * uOpacity;
+    gl_FragColor = vec4(col, alpha);
+  }
+`;
+
 // ============================================================
 // DREAMSCAPE ENGINE CLASS
 // ============================================================
@@ -692,6 +983,7 @@ export class DreamscapeEngine {
     // Reusable scratch objects (zero GC in render loop)
     this._dummy = new THREE.Object3D();
     this._tmpColor = new THREE.Color();
+    this._whiteColor = new THREE.Color(0xffffff);
     this._curPalA = new THREE.Vector3();
     this._curPalB = new THREE.Vector3();
     this._curPalC = new THREE.Vector3();
@@ -701,57 +993,216 @@ export class DreamscapeEngine {
     this._curAccent = new THREE.Color();
     this._curFog = new THREE.Color();
 
+    // Silent automatic dynamic resolution & shader quality scaling state
+    this.maxNativeDpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    this.availableTiers = RENDER_TIERS.filter((r) => r <= this.maxNativeDpr + 0.02);
+    if (this.availableTiers.length === 0) this.availableTiers = [0.66, 1.0];
+    this.tierIdx = this._pickInitialTierIndex();
+    this.currentScale = this.availableTiers[this.tierIdx];
+    this.shaderQuality = this._scaleToQuality(this.currentScale);
+    this.targetShaderQuality = this.shaderQuality;
+    this.perfWarmupSec = 0;
+    this.perfWindowSec = 0;
+    this.perfWindowFrames = 0;
+    this.lowFpsStreak = 0;
+    this.highFpsStreak = 0;
+    this.upgradeCount = 0;
+
+    // Anti-repeat variety director history
+    this.recentShaders = [];
+    this.recentWorlds3d = [];
+
     // Choreography timers
     this.clock = new THREE.Clock(false);
-    this.elapsed = Math.random() * 120; // Start at a fresh phase each boot
-    this.journeyIdxA = Math.floor(Math.random() * WORLD_JOURNEY.length);
-    this.journeyIdxB = (this.journeyIdxA + 1) % WORLD_JOURNEY.length;
+    this.elapsed = Math.random() * 140;
+    this.stepCounter = 0;
+    this.stepA = this._pickNextStep(null);
+    this.stepB = this._pickNextStep(this.stepA);
     this.morphProgress = 0.0;
     this.nudgeBoost = 0.0;
 
+    // Palette anti-repeat state
     this.paletteIdxA = Math.floor(Math.random() * PALETTES.length);
-    this.paletteIdxB = (this.paletteIdxA + 1) % PALETTES.length;
+    this.paletteIdxB = this._pickNextPalette(this.paletteIdxA);
     this.paletteProgress = 0.0;
 
     this.modeNameIdx = Math.floor(Math.random() * MODE_NAMES.length);
     this.lastTitleKey = '';
 
-    // 3D world opacity weights (0..1)
-    this.worldWeights = [0, 0, 0, 0];
+    // Atmosphere weights (smoothly damped)
+    this.worldWeights = [0, 0, 0, 0, 0, 0];
+    this.underwaterWeight = this._computeTargetUnderwater(0);
+    this.warpClock = Math.random() * 110; // Independent starfield time-warp timer
 
     this._initRenderer();
     this._initScene();
     this._initBackdrop();
-    this._initStarfield();
+    this._initWarpStarfield();
+    this._initUnderwaterFX();
     this._initSacredTunnel();
     this._initExoplanet();
     this._initBioluminescence();
     this._initSupernovaVortex();
+    this._initCelestialOrrery();
 
     this._onResize = this._handleResize.bind(this);
     window.addEventListener('resize', this._onResize);
 
-    // Pre-compile shaders on hardware GPUs
     if (!this.isSoftwareGl) {
       this.renderer.compile(this.scene, this.camera);
     }
 
-    // Emit initial title
     this._emitTitle(true);
+  }
+
+  _pickInitialTierIndex() {
+    if (this.isSoftwareGl) {
+      const idx = this.availableTiers.findIndex((r) => r >= 0.65);
+      return idx >= 0 ? idx : 0;
+    }
+    const cores = navigator.hardwareConcurrency || 4;
+    const largeScreen = Math.max(window.innerWidth, window.innerHeight) >= 1800;
+    // Smart TVs & low-core chips start at a balanced 0.80x and auto-adjust smoothly up or down
+    const targetStart = (cores <= 4 || largeScreen) ? 0.80 : Math.min(this.maxNativeDpr, 1.25);
+    let bestIdx = 0;
+    let bestDiff = Infinity;
+    for (let i = 0; i < this.availableTiers.length; i++) {
+      const diff = Math.abs(this.availableTiers[i] - targetStart);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestIdx = i;
+      }
+    }
+    return bestIdx;
+  }
+
+  _scaleToQuality(scale) {
+    if (scale <= 0.48) return 0.22;
+    if (scale <= 0.58) return 0.42;
+    if (scale <= 0.70) return 0.68;
+    return 1.0;
+  }
+
+  _applyRenderTier(newIdx) {
+    const clamped = Math.max(0, Math.min(this.availableTiers.length - 1, newIdx));
+    if (clamped === this.tierIdx) return;
+    this.tierIdx = clamped;
+    this.currentScale = this.availableTiers[this.tierIdx];
+    this.targetShaderQuality = this._scaleToQuality(this.currentScale);
+    if (this.renderer && !this.isDisposed) {
+      this.renderer.setPixelRatio(this.currentScale);
+      // Re-apply logical size without touching CSS so upscaling stays seamless & flicker-free
+      this.renderer.setSize(window.innerWidth, Math.max(window.innerHeight, 1), false);
+    }
+  }
+
+  _monitorPerformance(rawDt) {
+    if (this.isSoftwareGl) return;
+    // Ignore tab-switch spikes
+    if (rawDt <= 0 || rawDt > 0.45) return;
+
+    if (this.perfWarmupSec < 3.5) {
+      this.perfWarmupSec += rawDt;
+      return;
+    }
+
+    this.perfWindowSec += rawDt;
+    this.perfWindowFrames += 1;
+
+    if (this.perfWindowSec >= 2.2) {
+      const avgFps = this.perfWindowFrames / this.perfWindowSec;
+      this.perfWindowSec = 0;
+      this.perfWindowFrames = 0;
+
+      if (avgFps < 27.5) {
+        this.lowFpsStreak += 1;
+        this.highFpsStreak = 0;
+        if (this.lowFpsStreak >= 2 && this.tierIdx > 0) {
+          this.lowFpsStreak = 0;
+          this._applyRenderTier(this.tierIdx - 1);
+        }
+      } else if (avgFps > 52.0) {
+        this.highFpsStreak += 1;
+        this.lowFpsStreak = 0;
+        if (this.highFpsStreak >= 3 && this.tierIdx < this.availableTiers.length - 1 && this.upgradeCount < 2) {
+          this.highFpsStreak = 0;
+          this.upgradeCount += 1;
+          this._applyRenderTier(this.tierIdx + 1);
+        }
+      } else {
+        this.lowFpsStreak = 0;
+        this.highFpsStreak = 0;
+      }
+    }
+  }
+
+  _pickNextPalette(prevIdx) {
+    const prevFamily = PALETTES[prevIdx].family;
+    const candidates = [];
+    for (let i = 0; i < PALETTES.length; i++) {
+      if (i !== prevIdx && PALETTES[i].family !== prevFamily) {
+        candidates.push(i);
+      }
+    }
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  _pickNextStep(prevStep) {
+    // Choose a shader world that wasn't used in the last 3 steps
+    const shaderCandidates = [];
+    for (let s = 0; s < SHADER_WORLDS.length; s++) {
+      if (!this.recentShaders.includes(s)) shaderCandidates.push(s);
+    }
+    const shader = shaderCandidates.length > 0
+      ? shaderCandidates[Math.floor(Math.random() * shaderCandidates.length)]
+      : Math.floor(Math.random() * SHADER_WORLDS.length);
+
+    // Choose a harmonious 3D centerpiece (or Open Vista) avoiding recent repeats
+    const affinity = SHADER_AFFINITY[shader] || [0, 1, 2, 3, 4, 5];
+    let worldCandidates = affinity.filter((w) => !this.recentWorlds3d.includes(w));
+    if (worldCandidates.length === 0) {
+      worldCandidates = affinity.filter((w) => !prevStep || w !== prevStep.world3d);
+    }
+    if (worldCandidates.length === 0) worldCandidates = affinity;
+    const world3d = worldCandidates[Math.floor(Math.random() * worldCandidates.length)];
+
+    this.recentShaders.push(shader);
+    if (this.recentShaders.length > 3) this.recentShaders.shift();
+    this.recentWorlds3d.push(world3d);
+    if (this.recentWorlds3d.length > 2) this.recentWorlds3d.shift();
+
+    // Subtle organic motion variety per step
+    const twist = shader === 4 || shader === 5
+      ? 0.06 + Math.random() * 0.08
+      : 0.12 + Math.random() * 0.22;
+    const kaleido = shader === 1
+      ? 0.65 + Math.random() * 0.35
+      : (shader === 2 || shader === 7 ? Math.random() * 0.32 : (Math.random() < 0.22 ? 0.22 : 0.0));
+
+    // Randomize gentle lateral side & depth-sweep direction so fly-bys feel fresh every time
+    const flyDir = Math.random() < 0.5 ? 1 : -1;
+    const sideBias = -2.8 + Math.random() * 2.4; // Keeps centerpiece gracefully left-of-HUD
+
+    return { shader, world3d, twist, kaleido, flyDir, sideBias };
+  }
+
+  _computeTargetUnderwater(smoothMorph) {
+    const aAqua = (SHADER_WORLDS[this.stepA.shader].aquatic || THREE_WORLDS[this.stepA.world3d].aquatic) ? 1.0 : 0.0;
+    const bAqua = (SHADER_WORLDS[this.stepB.shader].aquatic || THREE_WORLDS[this.stepB.world3d].aquatic) ? 1.0 : 0.0;
+    return THREE.MathUtils.lerp(aAqua, bAqua, smoothMorph);
   }
 
   _initRenderer() {
     this.renderer = new THREE.WebGLRenderer({
-      antialias: !this.isSoftwareGl,
+      antialias: !this.isSoftwareGl && this.currentScale >= 0.8,
       alpha: false,
       powerPreference: 'high-performance',
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.08;
-    const maxDpr = this.isSoftwareGl ? 1 : Math.min(window.devicePixelRatio || 1, 1.75);
-    this.renderer.setPixelRatio(maxDpr);
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(this.currentScale);
+    this.renderer.setSize(window.innerWidth, Math.max(window.innerHeight, 1), false);
     this.renderer.domElement.style.display = 'block';
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
@@ -766,17 +1217,15 @@ export class DreamscapeEngine {
       52,
       window.innerWidth / Math.max(window.innerHeight, 1),
       0.1,
-      140
+      150
     );
     this.camera.position.set(0, 0, 12);
 
-    // Procedural RoomEnvironment for luminous PBR reflections on crystalline rings & moons
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     this.envRT = pmrem.fromScene(new RoomEnvironment(), 0.04);
     this.scene.environment = this.envRT.texture;
     pmrem.dispose();
 
-    // Warm/cool dynamic lighting rig synchronized to active Cosine palette
     this.hemiLight = new THREE.HemisphereLight(0x88ccff, 0x1e1b4b, 0.85);
     this.scene.add(this.hemiLight);
 
@@ -800,12 +1249,14 @@ export class DreamscapeEngine {
       depthWrite: false,
       uniforms: {
         uTime: { value: 0 },
-        uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
-        uSceneA: { value: 3 },
-        uSceneB: { value: 1 },
+        uResolution: { value: new THREE.Vector2(window.innerWidth, Math.max(window.innerHeight, 1)) },
+        uSceneA: { value: this.stepA.shader },
+        uSceneB: { value: this.stepB.shader },
         uMorph: { value: 0 },
         uTwist: { value: 0.15 },
         uKaleido: { value: 0.0 },
+        uQuality: { value: this.shaderQuality },
+        uUnderwater: { value: 0.0 },
         uPalA: { value: new THREE.Vector3(0.18, 0.16, 0.28) },
         uPalB: { value: new THREE.Vector3(0.45, 0.36, 0.44) },
         uPalC: { value: new THREE.Vector3(1.0, 0.9, 0.85) },
@@ -818,27 +1269,195 @@ export class DreamscapeEngine {
     this.scene.add(this.backdropMesh);
   }
 
-  _initStarfield() {
-    const count = 650;
-    const positions = new Float32Array(count * 3);
+  // LAYER 3A: Slow Time-Warp 3D Starfield (star heads + luminous velocity-stretched streaks)
+  _initWarpStarfield() {
+    this.starGroup = new THREE.Group();
+    const count = 380;
+    this.starCount = count;
+    this.starData = [];
+
+    const headPositions = new Float32Array(count * 3);
+    const headColors = new Float32Array(count * 3);
+    const streakPositions = new Float32Array(count * 2 * 3);
+    const streakColors = new Float32Array(count * 2 * 3);
+
+    const starTints = [
+      new THREE.Color('#fff9eb'), // Warm ivory
+      new THREE.Color('#dbeafe'), // Blue-white giant
+      new THREE.Color('#fde68a'), // Soft amber dwarf
+      new THREE.Color('#e0e7ff'), // Pale sapphire
+      new THREE.Color('#fbcfe8'), // Subtle rose star
+    ];
+
     for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 70;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 44;
-      positions[i * 3 + 2] = -Math.random() * 68 + 8;
+      // Keep a gentle clear lane dead-center so streaks bloom radially around the viewer
+      let x = (Math.random() - 0.5) * 62;
+      let y = (Math.random() - 0.5) * 40;
+      if (Math.hypot(x, y) < 2.2) {
+        x += (x >= 0 ? 2.5 : -2.5);
+      }
+      const z = -Math.random() * 76 + 10;
+      const speed = 0.65 + Math.random() * 0.95;
+      const tint = starTints[i % starTints.length];
+
+      this.starData.push({
+        x, y, z,
+        speed,
+        r: tint.r,
+        g: tint.g,
+        b: tint.b,
+      });
+
+      headPositions[i * 3] = x;
+      headPositions[i * 3 + 1] = y;
+      headPositions[i * 3 + 2] = z;
+
+      headColors[i * 3] = tint.r;
+      headColors[i * 3 + 1] = tint.g;
+      headColors[i * 3 + 2] = tint.b;
+
+      const s6 = i * 6;
+      streakPositions[s6] = x;
+      streakPositions[s6 + 1] = y;
+      streakPositions[s6 + 2] = z;
+      streakPositions[s6 + 3] = x;
+      streakPositions[s6 + 4] = y;
+      streakPositions[s6 + 5] = z - 0.5;
+
+      streakColors[s6] = tint.r;
+      streakColors[s6 + 1] = tint.g;
+      streakColors[s6 + 2] = tint.b;
+      // Dim tail so streaks dissolve gracefully into space
+      streakColors[s6 + 3] = tint.r * 0.08;
+      streakColors[s6 + 4] = tint.g * 0.12;
+      streakColors[s6 + 5] = tint.b * 0.20;
     }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    this.starHeadPosAttr = new THREE.BufferAttribute(headPositions, 3);
+    const headGeo = new THREE.BufferGeometry();
+    headGeo.setAttribute('position', this.starHeadPosAttr);
+    headGeo.setAttribute('color', new THREE.BufferAttribute(headColors, 3));
+
     this.starMat = new THREE.PointsMaterial({
       map: this.glowTex,
-      color: 0xe2e8f0,
-      size: 0.34,
+      size: 0.36,
+      vertexColors: true,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.62,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
-    this.starField = new THREE.Points(geo, this.starMat);
-    this.scene.add(this.starField);
+    this.starField = new THREE.Points(headGeo, this.starMat);
+    this.starField.frustumCulled = false;
+
+    this.starStreakPosAttr = new THREE.BufferAttribute(streakPositions, 3);
+    const streakGeo = new THREE.BufferGeometry();
+    streakGeo.setAttribute('position', this.starStreakPosAttr);
+    streakGeo.setAttribute('color', new THREE.BufferAttribute(streakColors, 3));
+
+    this.starStreakMat = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.starStreaks = new THREE.LineSegments(streakGeo, this.starStreakMat);
+    this.starStreaks.frustumCulled = false;
+
+    this.starGroup.add(this.starField, this.starStreaks);
+    this.scene.add(this.starGroup);
+  }
+
+  // LAYER 3B: Underwater Atmosphere FX (random rising glass bubble streams + swaying abyssal ribbons)
+  _initUnderwaterFX() {
+    this.underwaterGroup = new THREE.Group();
+
+    // 1. 145 Instanced translucent glass bubbles in organic rising clusters
+    const bubbleCount = 145;
+    const bubbleGeo = new THREE.SphereGeometry(0.28, 16, 12);
+    this.bubbleMat = new THREE.ShaderMaterial({
+      vertexShader: BUBBLE_VERTEX_SHADER,
+      fragmentShader: BUBBLE_FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uColorA: { value: new THREE.Color('#67e8f9') },
+        uColorB: { value: new THREE.Color('#c4b5fd') },
+        uOpacity: { value: 0.0 },
+      },
+    });
+    this.bubbleMesh = new THREE.InstancedMesh(bubbleGeo, this.bubbleMat, bubbleCount);
+    this.bubbleMesh.frustumCulled = false;
+
+    // 8 drifting vent clusters across ocean floor for natural bubble-stream groupings
+    this.bubbleVents = [];
+    for (let v = 0; v < 8; v++) {
+      this.bubbleVents.push({
+        baseX: -12 + v * 3.2 + (Math.random() - 0.5) * 1.4,
+        z: -3 - Math.random() * 14,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+
+    this.bubbleData = [];
+    for (let i = 0; i < bubbleCount; i++) {
+      const ventIdx = i % this.bubbleVents.length;
+      const vent = this.bubbleVents[ventIdx];
+      const tier = Math.random();
+      // Mix tiny champagne micro-bubbles, mid bubbles, and occasional large wobbly hero bubbles
+      const radiusScale = tier < 0.58
+        ? 0.18 + Math.random() * 0.24
+        : (tier < 0.88 ? 0.45 + Math.random() * 0.42 : 0.95 + Math.random() * 0.72);
+
+      this.bubbleData.push({
+        ventIdx,
+        offsetX: (Math.random() - 0.5) * 3.4,
+        y: -11 + Math.random() * 22,
+        offsetZ: (Math.random() - 0.5) * 3.0,
+        scale: radiusScale,
+        riseSpeed: (0.42 + Math.random() * 0.58) * (0.7 + 0.5 / Math.max(radiusScale, 0.35)),
+        wobbleFreq: 0.7 + Math.random() * 1.1,
+        wobbleAmp: 0.28 + Math.random() * 0.55,
+        phase: Math.random() * Math.PI * 2,
+        isHero: tier >= 0.88,
+      });
+    }
+    this.underwaterGroup.add(this.bubbleMesh);
+
+    // 2. 6 Gossamer swaying deep-sea light curtains / kelp filaments in the misty background
+    this.abyssRibbons = [];
+    const ribbonGeo = new THREE.PlaneGeometry(1.4, 15.5, 4, 24);
+    for (let i = 0; i < 6; i++) {
+      const mat = new THREE.ShaderMaterial({
+        vertexShader: ABYSS_RIBBON_VERTEX_SHADER,
+        fragmentShader: ABYSS_RIBBON_FRAGMENT_SHADER,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        uniforms: {
+          uTime: { value: 0 },
+          uPhase: { value: i * 1.37 },
+          uColorA: { value: new THREE.Color('#2dd4bf') },
+          uColorB: { value: new THREE.Color('#38bdf8') },
+          uOpacity: { value: 0.0 },
+        },
+      });
+      const ribbon = new THREE.Mesh(ribbonGeo, mat);
+      ribbon.position.set(
+        -10.5 + i * 3.6 + (Math.random() - 0.5) * 1.4,
+        -1.5 + (i % 2) * 1.4,
+        -11.5 - (i % 3) * 3.5
+      );
+      ribbon.rotation.y = (Math.random() - 0.5) * 0.7;
+      this.underwaterGroup.add(ribbon);
+      this.abyssRibbons.push({ mesh: ribbon, mat });
+    }
+
+    this.underwaterGroup.visible = false;
+    this.scene.add(this.underwaterGroup);
   }
 
   // 3D WORLD 0: Sacred Geometry Tunnel (7 varied gossamer polygon archetypes with shifting centers)
@@ -847,7 +1466,6 @@ export class DreamscapeEngine {
     this.tunnelRings = [];
     this.tunnelMaterials = [];
 
-    // Shared library of 7 distinct polygon & polyhedral archetypes (pre-allocated once — zero GC)
     const tetraEdges = new THREE.EdgesGeometry(new THREE.TetrahedronGeometry(3.25, 0));
     const octaEdges = new THREE.EdgesGeometry(new THREE.OctahedronGeometry(3.35, 0));
     const dodecaEdges = new THREE.EdgesGeometry(new THREE.DodecahedronGeometry(3.4, 0));
@@ -855,49 +1473,42 @@ export class DreamscapeEngine {
 
     this.tunnelArchetypes = [
       {
-        // 0: Triangle / Merkaba Star
         outer: new THREE.TorusGeometry(4.1, 0.028, 6, 3),
         inner: new THREE.TorusGeometry(3.35, 0.019, 6, 3),
         innerRot: Math.PI,
         filigree: tetraEdges,
       },
       {
-        // 1: Diamond / Rhombus Portal
         outer: new THREE.TorusGeometry(4.2, 0.028, 6, 4),
         inner: new THREE.TorusGeometry(2.9, 0.019, 6, 4),
         innerRot: Math.PI / 4,
         filigree: octaEdges,
       },
       {
-        // 2: Pentagon / Golden Sanctuary
         outer: new THREE.TorusGeometry(4.25, 0.027, 6, 5),
         inner: new THREE.TorusGeometry(2.8, 0.018, 6, 5),
         innerRot: Math.PI / 5,
         filigree: dodecaEdges,
       },
       {
-        // 3: Hexagon / Flower Frame
         outer: new THREE.TorusGeometry(4.3, 0.026, 6, 6),
         inner: new THREE.TorusGeometry(2.75, 0.018, 6, 6),
         innerRot: Math.PI / 6,
         filigree: icosaEdges,
       },
       {
-        // 4: Heptagon / Mystic Star
         outer: new THREE.TorusGeometry(4.25, 0.025, 6, 7),
         inner: new THREE.TorusGeometry(2.85, 0.017, 6, 7),
         innerRot: Math.PI / 7,
         filigree: dodecaEdges,
       },
       {
-        // 5: Octagon / Cathedral Rose
         outer: new THREE.TorusGeometry(4.35, 0.025, 6, 8),
         inner: new THREE.TorusGeometry(2.95, 0.017, 6, 8),
         innerRot: Math.PI / 8,
         filigree: octaEdges,
       },
       {
-        // 6: Decagon & Sacred Torus-Knot Halo
         outer: new THREE.TorusGeometry(4.4, 0.022, 6, 10),
         inner: new THREE.TorusKnotGeometry(2.55, 0.016, 64, 5, 2, 3),
         innerRot: 0,
@@ -984,12 +1595,11 @@ export class DreamscapeEngine {
     this.scene.add(this.tunnelGroup);
   }
 
-  // 3D WORLD 1: Composite Procedural Ringed Exoplanet & Orbiting Moons
+  // 3D WORLD 1: Composite Procedural Ringed Exoplanet & Orbiting Moons (grand fly-by arc)
   _initExoplanet() {
     this.planetGroup = new THREE.Group();
 
-    // 1. Banded gas giant core
-    const planetGeo = new THREE.SphereGeometry(2.55, 48, 36);
+    const planetGeo = new THREE.SphereGeometry(2.45, 44, 32);
     this.planetCoreMat = new THREE.ShaderMaterial({
       vertexShader: PLANET_VERTEX_SHADER,
       fragmentShader: PLANET_FRAGMENT_SHADER,
@@ -1006,8 +1616,7 @@ export class DreamscapeEngine {
     this.planetSphere = new THREE.Mesh(planetGeo, this.planetCoreMat);
     this.planetGroup.add(this.planetSphere);
 
-    // 2. Outer translucent Fresnel Rayleigh Atmosphere Halo
-    const atmoGeo = new THREE.SphereGeometry(2.86, 40, 32);
+    const atmoGeo = new THREE.SphereGeometry(2.76, 36, 28);
     this.planetAtmoMat = new THREE.ShaderMaterial({
       vertexShader: FRESNEL_VERTEX_SHADER,
       fragmentShader: FRESNEL_FRAGMENT_SHADER,
@@ -1027,8 +1636,7 @@ export class DreamscapeEngine {
     this.planetAtmo.renderOrder = 4;
     this.planetGroup.add(this.planetAtmo);
 
-    // 3. Tilted multi-band translucent planetary rings
-    const ringGeo = new THREE.PlaneGeometry(11.6, 11.6, 1, 1);
+    const ringGeo = new THREE.PlaneGeometry(11.4, 11.4, 1, 1);
     this.planetRingMat = new THREE.ShaderMaterial({
       vertexShader: RING_VERTEX_SHADER,
       fragmentShader: RING_FRAGMENT_SHADER,
@@ -1049,7 +1657,6 @@ export class DreamscapeEngine {
     this.planetRing.renderOrder = 3;
     this.planetGroup.add(this.planetRing);
 
-    // 4. Two composite orbiting moons (varied roughness/metalness)
     this.moonMatA = new THREE.MeshStandardMaterial({
       color: 0xe2e8f0,
       emissive: 0x38bdf8,
@@ -1073,18 +1680,16 @@ export class DreamscapeEngine {
     this.moonB = new THREE.Mesh(new THREE.IcosahedronGeometry(0.26, 2), this.moonMatB);
     this.planetGroup.add(this.moonA, this.moonB);
 
-    // Frame gracefully left-of-center so right-hand HUD stays unobstructed
-    this.planetGroup.position.set(-2.2, 0.2, -2.5);
+    this.planetGroup.position.set(-2.2, 0.2, -5.0);
     this.planetGroup.visible = false;
     this.scene.add(this.planetGroup);
   }
 
-  // 3D WORLD 2: Underwater Bioluminescence (composite jellyfish + 260 instanced plankton motes)
+  // 3D WORLD 2: Underwater Bioluminescence (jellyfish bloom + 240 instanced plankton motes)
   _initBioluminescence() {
     this.biolumGroup = new THREE.Group();
     this.jellies = [];
 
-    // Lathe bell profile for graceful jellyfish silhouette
     const bellPts = [
       new THREE.Vector2(0.01, 1.05),
       new THREE.Vector2(0.42, 0.96),
@@ -1093,8 +1698,8 @@ export class DreamscapeEngine {
       new THREE.Vector2(1.02, -0.18),
       new THREE.Vector2(0.82, -0.12),
     ];
-    const bellGeo = new THREE.LatheGeometry(bellPts, 28);
-    const coreGeo = new THREE.SphereGeometry(0.42, 20, 16);
+    const bellGeo = new THREE.LatheGeometry(bellPts, 24);
+    const coreGeo = new THREE.SphereGeometry(0.42, 18, 14);
 
     this.jellyBellMat = new THREE.ShaderMaterial({
       vertexShader: FRESNEL_VERTEX_SHADER,
@@ -1133,9 +1738,10 @@ export class DreamscapeEngine {
     });
 
     const jellyConfigs = [
-      { pos: [-3.4, -0.6, -1.8], scale: 1.25, phase: 0.0, speed: 0.22 },
-      { pos: [0.8, 1.5, -5.2], scale: 0.95, phase: 2.1, speed: 0.18 },
-      { pos: [-5.4, 2.2, -6.8], scale: 0.8, phase: 4.3, speed: 0.15 },
+      { pos: [-3.4, -0.6, -2.0], scale: 1.25, phase: 0.0, speed: 0.22 },
+      { pos: [0.6, 1.5, -5.5], scale: 0.95, phase: 2.1, speed: 0.18 },
+      { pos: [-5.6, 2.2, -7.2], scale: 0.82, phase: 4.3, speed: 0.15 },
+      { pos: [-1.2, -2.8, -9.0], scale: 0.72, phase: 5.4, speed: 0.20 },
     ];
 
     jellyConfigs.forEach((cfg) => {
@@ -1146,8 +1752,6 @@ export class DreamscapeEngine {
       core.scale.set(0.85, 1.15, 0.85);
       jelly.add(bell, core);
 
-      // 6 sinuous trailing TubeGeometry tentacles per jellyfish
-      const tentacles = [];
       for (let t = 0; t < 6; t++) {
         const ang = (t / 6) * Math.PI * 2;
         const rad = 0.35 + (t % 2) * 0.24;
@@ -1163,21 +1767,19 @@ export class DreamscapeEngine {
           );
         }
         const curve = new THREE.CatmullRomCurve3(curvePts);
-        const tubeGeo = new THREE.TubeGeometry(curve, 18, 0.022, 5, false);
+        const tubeGeo = new THREE.TubeGeometry(curve, 16, 0.022, 5, false);
         const tube = new THREE.Mesh(tubeGeo, this.tentacleMat);
         jelly.add(tube);
-        tentacles.push(tube);
       }
 
       jelly.position.set(cfg.pos[0], cfg.pos[1], cfg.pos[2]);
       jelly.scale.setScalar(cfg.scale);
-      jelly.userData = { ...cfg, basePos: new THREE.Vector3(...cfg.pos), tentacles };
+      jelly.userData = { ...cfg, basePos: new THREE.Vector3(...cfg.pos) };
       this.biolumGroup.add(jelly);
       this.jellies.push(jelly);
     });
 
-    // InstancedMesh of 260 bioluminescent plankton motes rising in 3D currents
-    const planktonCount = 260;
+    const planktonCount = 240;
     const moteGeo = new THREE.OctahedronGeometry(0.085, 1);
     this.planktonMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
@@ -1195,15 +1797,14 @@ export class DreamscapeEngine {
 
     this.planktonData = [];
     for (let i = 0; i < planktonCount; i++) {
-      const data = {
+      this.planktonData.push({
         x: (Math.random() - 0.5) * 24 - 1.0,
         y: (Math.random() - 0.5) * 16,
         z: -Math.random() * 18 + 2,
         scale: 0.55 + Math.random() * 0.95,
         speed: 0.18 + Math.random() * 0.32,
         phase: Math.random() * Math.PI * 2,
-      };
-      this.planktonData.push(data);
+      });
       this._tmpColor.setHSL(0.46 + Math.random() * 0.22, 0.85, 0.65);
       this.planktonMesh.setColorAt(i, this._tmpColor);
     }
@@ -1218,8 +1819,7 @@ export class DreamscapeEngine {
   _initSupernovaVortex() {
     this.vortexGroup = new THREE.Group();
 
-    // 1. 2,200-particle spiral accretion galaxy
-    const count = 2200;
+    const count = 1900;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
     const cInner = new THREE.Color('#fff5e6');
@@ -1264,7 +1864,6 @@ export class DreamscapeEngine {
     this.vortexPoints = new THREE.Points(pGeo, this.vortexPointsMat);
     this.vortexGroup.add(this.vortexPoints);
 
-    // 2. Luminous core + dual precessing relativistic plasma torus rings
     this.vortexCoreMat = new THREE.ShaderMaterial({
       vertexShader: FRESNEL_VERTEX_SHADER,
       fragmentShader: FRESNEL_FRAGMENT_SHADER,
@@ -1280,7 +1879,7 @@ export class DreamscapeEngine {
         uPower: { value: 1.8 },
       },
     });
-    this.vortexCore = new THREE.Mesh(new THREE.SphereGeometry(1.15, 32, 24), this.vortexCoreMat);
+    this.vortexCore = new THREE.Mesh(new THREE.SphereGeometry(1.15, 28, 22), this.vortexCoreMat);
 
     this.vortexRingMat = new THREE.MeshStandardMaterial({
       color: 0xffd39e,
@@ -1293,31 +1892,127 @@ export class DreamscapeEngine {
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     });
-    this.vortexRingA = new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.055, 12, 80), this.vortexRingMat);
-    this.vortexRingB = new THREE.Mesh(new THREE.TorusGeometry(3.8, 0.04, 12, 96), this.vortexRingMat);
+    this.vortexRingA = new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.055, 10, 72), this.vortexRingMat);
+    this.vortexRingB = new THREE.Mesh(new THREE.TorusGeometry(3.8, 0.04, 10, 84), this.vortexRingMat);
     this.vortexRingB.rotation.x = Math.PI * 0.46;
 
     this.vortexGroup.add(this.vortexCore, this.vortexRingA, this.vortexRingB);
-    this.vortexGroup.position.set(-1.6, 0.1, -3.5);
+    this.vortexGroup.position.set(-1.6, 0.1, -4.5);
     this.vortexGroup.rotation.x = 0.55;
     this.vortexGroup.visible = false;
     this.scene.add(this.vortexGroup);
   }
 
+  // 3D WORLD 4: Celestial Crystal Orrery (delicate gyroscopic rings, binary core & orbiting prism shards)
+  _initCelestialOrrery() {
+    this.orreryGroup = new THREE.Group();
+
+    this.orreryRingMat = new THREE.ShaderMaterial({
+      vertexShader: ETHEREAL_POLY_VERTEX_SHADER,
+      fragmentShader: ETHEREAL_POLY_FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uColorA: { value: new THREE.Color('#fde68a') },
+        uColorB: { value: new THREE.Color('#38bdf8') },
+        uOpacity: { value: 0.0 },
+      },
+    });
+
+    this.orreryRings = [];
+    const ringRadii = [2.2, 3.35, 4.55, 5.75];
+    for (let i = 0; i < ringRadii.length; i++) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(ringRadii[i], 0.026 - i * 0.002, 8, 96),
+        this.orreryRingMat
+      );
+      ring.rotation.x = i * 0.72;
+      ring.rotation.y = i * 0.55;
+      this.orreryGroup.add(ring);
+      this.orreryRings.push(ring);
+    }
+
+    // Luminous binary twin stars gently orbiting inside the gimbal
+    this.orreryStarMatA = new THREE.ShaderMaterial({
+      vertexShader: FRESNEL_VERTEX_SHADER,
+      fragmentShader: FRESNEL_FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uTime: { value: 0 },
+        uPulse: { value: 0 },
+        uColorA: { value: new THREE.Color('#fff5e6') },
+        uColorB: { value: new THREE.Color('#ffd39e') },
+        uOpacity: { value: 0.0 },
+        uPower: { value: 1.6 },
+      },
+    });
+    this.orreryStarMatB = new THREE.ShaderMaterial({
+      vertexShader: FRESNEL_VERTEX_SHADER,
+      fragmentShader: FRESNEL_FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uTime: { value: 0 },
+        uPulse: { value: 0 },
+        uColorA: { value: new THREE.Color('#67e8f9') },
+        uColorB: { value: new THREE.Color('#a78bfa') },
+        uOpacity: { value: 0.0 },
+        uPower: { value: 1.8 },
+      },
+    });
+    this.orreryStarA = new THREE.Mesh(new THREE.SphereGeometry(0.62, 24, 18), this.orreryStarMatA);
+    this.orreryStarB = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 16), this.orreryStarMatB);
+    this.orreryGroup.add(this.orreryStarA, this.orreryStarB);
+
+    // 18 orbiting faceted translucent crystal monolith shards
+    this.orreryShardMat = new THREE.ShaderMaterial({
+      vertexShader: FRESNEL_VERTEX_SHADER,
+      fragmentShader: FRESNEL_FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uTime: { value: 0 },
+        uPulse: { value: 0 },
+        uColorA: { value: new THREE.Color('#f5d0fe') },
+        uColorB: { value: new THREE.Color('#7dd3fc') },
+        uOpacity: { value: 0.0 },
+        uPower: { value: 2.0 },
+      },
+    });
+    const shardGeo = new THREE.OctahedronGeometry(0.32, 0);
+    this.orreryShards = [];
+    for (let i = 0; i < 18; i++) {
+      const shard = new THREE.Mesh(shardGeo, this.orreryShardMat);
+      shard.scale.set(0.65, 1.75 + (i % 3) * 0.45, 0.65);
+      shard.userData = {
+        orbitRadius: 2.3 + (i % 5) * 0.92,
+        orbitSpeed: (0.07 + (i % 4) * 0.03) * (i % 2 === 0 ? 1 : -1),
+        inclination: (Math.random() - 0.5) * 1.15,
+        phase: (i / 18) * Math.PI * 2,
+      };
+      this.orreryGroup.add(shard);
+      this.orreryShards.push(shard);
+    }
+
+    this.orreryGroup.position.set(-1.8, 0.2, -5.0);
+    this.orreryGroup.visible = false;
+    this.scene.add(this.orreryGroup);
+  }
+
   _emitTitle(force = false) {
     if (!this.onTitleChange) return;
     const pal = PALETTES[this.paletteIdxA];
-    const stepA = WORLD_JOURNEY[this.journeyIdxA];
-    const stepB = WORLD_JOURNEY[this.journeyIdxB];
-
-    // Pick poetic pair reflecting the currently dominant stage
-    const activeStep = this.morphProgress > 0.55 ? stepB : stepA;
+    const activeStep = this.morphProgress > 0.55 ? this.stepB : this.stepA;
     const shaderMeta = SHADER_WORLDS[activeStep.shader];
     const world3dMeta = THREE_WORLDS[activeStep.world3d];
     const modeName = MODE_NAMES[this.modeNameIdx % MODE_NAMES.length];
 
-    // Alternate smoothly between shader noun and 3D world noun for poetic variety
-    const noun = (this.journeyIdxA + this.modeNameIdx) % 2 === 0 ? shaderMeta.noun : world3dMeta.noun;
+    const noun = (this.stepCounter + this.modeNameIdx) % 2 === 0 ? shaderMeta.noun : world3dMeta.noun;
     const subtitle = `${pal.mood} ${noun}`;
     const key = `${modeName}|${subtitle}`;
 
@@ -1329,17 +2024,13 @@ export class DreamscapeEngine {
 
   getCurrentTitle() {
     const pal = PALETTES[this.paletteIdxA];
-    const step = WORLD_JOURNEY[this.journeyIdxA];
     const modeName = MODE_NAMES[this.modeNameIdx % MODE_NAMES.length];
-    const noun = (this.journeyIdxA + this.modeNameIdx) % 2 === 0
-      ? SHADER_WORLDS[step.shader].noun
-      : THREE_WORLDS[step.world3d].noun;
+    const noun = (this.stepCounter + this.modeNameIdx) % 2 === 0
+      ? SHADER_WORLDS[this.stepA.shader].noun
+      : THREE_WORLDS[this.stepA.world3d].noun;
     return { modeName, subtitle: `${pal.mood} ${noun}` };
   }
 
-  /**
-   * Gently accelerate into the next morph & color mood on user tap / remote arrow
-   */
   nudgeNext() {
     this.nudgeBoost = 1.0;
   }
@@ -1347,6 +2038,9 @@ export class DreamscapeEngine {
   start() {
     if (this.isRunning || this.isDisposed) return;
     this.isRunning = true;
+    this.perfWarmupSec = 0;
+    this.perfWindowSec = 0;
+    this.perfWindowFrames = 0;
     this.clock.start();
     this._handleResize();
     this._tick();
@@ -1368,7 +2062,8 @@ export class DreamscapeEngine {
     const h = Math.max(window.innerHeight, 1);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
+    this.renderer.setPixelRatio(this.currentScale);
+    this.renderer.setSize(w, h, false);
     this.backdropMat.uniforms.uResolution.value.set(w, h);
   }
 
@@ -1396,27 +2091,30 @@ export class DreamscapeEngine {
     }
   }
 
-  _update(dt) {
-    const safeDt = Math.min(dt, 0.12);
+  _update(rawDt) {
+    // Silent automatic dynamic resolution & shader quality monitor
+    this._monitorPerformance(rawDt);
+
+    const safeDt = Math.min(rawDt, 0.12);
     this.elapsed += safeDt;
+    this.warpClock += safeDt;
+    this.shaderQuality = THREE.MathUtils.damp(this.shaderQuality, this.targetShaderQuality, 1.2, safeDt);
 
     // Gentle manual nudge accelerates morph cleanly (~3.5s glide) then decays back to lava-lamp speed
     let morphSpeed = 1.0 / MORPH_CYCLE_SEC;
     let palSpeed = 1.0 / PALETTE_CYCLE_SEC;
     if (this.nudgeBoost > 0.001) {
       morphSpeed = THREE.MathUtils.lerp(morphSpeed, 0.26, this.nudgeBoost);
-      palSpeed = THREE.MathUtils.lerp(palSpeed, 0.14, this.nudgeBoost);
+      palSpeed = THREE.MathUtils.lerp(palSpeed, 0.18, this.nudgeBoost);
       this.nudgeBoost = THREE.MathUtils.damp(this.nudgeBoost, 0, 1.4, safeDt);
     }
 
     this.morphProgress += safeDt * morphSpeed;
     if (this.morphProgress >= 1.0) {
       this.morphProgress -= 1.0;
-      this.journeyIdxA = this.journeyIdxB;
-      // Pick a fresh next journey step (never identical)
-      let nextIdx = (this.journeyIdxB + 1 + Math.floor(Math.random() * 2)) % WORLD_JOURNEY.length;
-      if (nextIdx === this.journeyIdxA) nextIdx = (this.journeyIdxA + 1) % WORLD_JOURNEY.length;
-      this.journeyIdxB = nextIdx;
+      this.stepCounter += 1;
+      this.stepA = this.stepB;
+      this.stepB = this._pickNextStep(this.stepA);
       this.modeNameIdx = (this.modeNameIdx + 1) % MODE_NAMES.length;
       this.nudgeBoost = 0;
       this._emitTitle(false);
@@ -1426,11 +2124,10 @@ export class DreamscapeEngine {
     if (this.paletteProgress >= 1.0) {
       this.paletteProgress -= 1.0;
       this.paletteIdxA = this.paletteIdxB;
-      this.paletteIdxB = (this.paletteIdxB + 1 + Math.floor(Math.random() * (PALETTES.length - 2))) % PALETTES.length;
+      this.paletteIdxB = this._pickNextPalette(this.paletteIdxA);
       this._emitTitle(false);
     }
 
-    // Smooth S-curves for meditative lava-lamp blends
     const smoothMorph = THREE.MathUtils.smootherstep(this.morphProgress, 0.0, 1.0);
     const smoothPal = THREE.MathUtils.smootherstep(this.paletteProgress, 0.0, 1.0);
 
@@ -1452,17 +2149,21 @@ export class DreamscapeEngine {
     this.rimLight.color.copy(this._curRim);
     this.hemiLight.color.copy(this._curRim);
 
-    // 2. Update Layer 1 GLSL Backdrop Uniforms
-    const stepA = WORLD_JOURNEY[this.journeyIdxA];
-    const stepB = WORLD_JOURNEY[this.journeyIdxB];
+    // Smooth underwater vs cosmic atmosphere crossfade
+    const targetUnderwater = this._computeTargetUnderwater(smoothMorph);
+    this.underwaterWeight = THREE.MathUtils.damp(this.underwaterWeight, targetUnderwater, 0.85, safeDt);
+    const spaceWeight = 1.0 - this.underwaterWeight;
 
+    // 2. Update Layer 1 GLSL Backdrop Uniforms
     const u = this.backdropMat.uniforms;
     u.uTime.value = this.elapsed;
-    u.uSceneA.value = stepA.shader;
-    u.uSceneB.value = stepB.shader;
+    u.uSceneA.value = this.stepA.shader;
+    u.uSceneB.value = this.stepB.shader;
     u.uMorph.value = smoothMorph;
-    u.uTwist.value = THREE.MathUtils.lerp(stepA.twist, stepB.twist, smoothMorph);
-    u.uKaleido.value = THREE.MathUtils.lerp(stepA.kaleido, stepB.kaleido, smoothMorph);
+    u.uTwist.value = THREE.MathUtils.lerp(this.stepA.twist, this.stepB.twist, smoothMorph);
+    u.uKaleido.value = THREE.MathUtils.lerp(this.stepA.kaleido, this.stepB.kaleido, smoothMorph);
+    u.uQuality.value = this.shaderQuality;
+    u.uUnderwater.value = this.underwaterWeight;
     u.uPalA.value.copy(this._curPalA);
     u.uPalB.value.copy(this._curPalB);
     u.uPalC.value.copy(this._curPalC);
@@ -1470,29 +2171,129 @@ export class DreamscapeEngine {
 
     // 3. Gentle meditative camera float
     const t = this.elapsed;
-    this.camera.position.x = Math.sin(t * 0.055) * 0.95;
-    this.camera.position.y = Math.cos(t * 0.043) * 0.65;
-    this.camera.position.z = 11.8 + Math.sin(t * 0.031) * 0.9;
+    this.camera.position.x = Math.sin(t * 0.052) * 0.95;
+    this.camera.position.y = Math.cos(t * 0.041) * 0.65;
+    this.camera.position.z = 11.8 + Math.sin(t * 0.029) * 0.9;
     this.camera.lookAt(-1.1, 0, -4.0);
 
-    // 4. Slow parallax stardust drift
-    this.starField.rotation.z = t * 0.009;
-    this.starField.rotation.y = Math.sin(t * 0.014) * 0.12;
-    this.starMat.color.copy(this._curKey).lerp(this._curRim, 0.5);
+    // 4. LAYER 3A: Slow Time-Warp Starfield Update (fades smoothly during underwater scenes)
+    this.starGroup.visible = spaceWeight > 0.02;
+    if (this.starGroup.visible) {
+      // Independent periodic slow time-warp surge (~42s smooth slipstream every ~185s)
+      const warpCycle = (this.warpClock % 185.0) / 185.0;
+      const surgeWindow = warpCycle > 0.62 && warpCycle < 0.86
+        ? Math.sin(((warpCycle - 0.62) / 0.24) * Math.PI)
+        : 0.0;
+      const warpIntensity = Math.pow(surgeWindow, 1.35) * spaceWeight;
 
-    // 5. Compute smooth 3D Layer weights (allows 2 3D worlds to gracefully overlap during morphs)
-    for (let i = 0; i < 4; i++) {
+      const forwardVel = THREE.MathUtils.lerp(1.35, 15.5, warpIntensity);
+      const streakTailLen = THREE.MathUtils.lerp(0.08, 4.6, warpIntensity);
+      // Gentle curved slipstream banking during time-warp
+      const bankX = Math.sin(t * 0.08) * 0.65 * warpIntensity;
+      const bankY = Math.cos(t * 0.065) * 0.45 * warpIntensity;
+
+      const headArr = this.starHeadPosAttr.array;
+      const streakArr = this.starStreakPosAttr.array;
+
+      for (let i = 0; i < this.starCount; i++) {
+        const s = this.starData[i];
+        s.z += safeDt * forwardVel * s.speed;
+        if (s.z > 13.5) {
+          s.z -= 78.0;
+          s.x = (Math.random() - 0.5) * 62;
+          s.y = (Math.random() - 0.5) * 40;
+          if (Math.hypot(s.x, s.y) < 2.2) s.x += (s.x >= 0 ? 2.5 : -2.5);
+        }
+
+        const px = s.x + bankX * (13.5 - s.z) * 0.03;
+        const py = s.y + bankY * (13.5 - s.z) * 0.03;
+
+        headArr[i * 3] = px;
+        headArr[i * 3 + 1] = py;
+        headArr[i * 3 + 2] = s.z;
+
+        if (warpIntensity > 0.02) {
+          const s6 = i * 6;
+          streakArr[s6] = px;
+          streakArr[s6 + 1] = py;
+          streakArr[s6 + 2] = s.z;
+          streakArr[s6 + 3] = px - bankX * 0.14;
+          streakArr[s6 + 4] = py - bankY * 0.14;
+          streakArr[s6 + 5] = s.z - streakTailLen * s.speed;
+        }
+      }
+
+      this.starHeadPosAttr.needsUpdate = true;
+      this.starMat.opacity = spaceWeight * (0.58 + 0.22 * warpIntensity);
+      this.starMat.color.copy(this._curKey).lerp(this._curRim, 0.5).lerp(this._whiteColor, 0.55);
+
+      this.starStreaks.visible = warpIntensity > 0.02;
+      if (this.starStreaks.visible) {
+        this.starStreakPosAttr.needsUpdate = true;
+        this.starStreakMat.opacity = warpIntensity * 0.62;
+      }
+      this.starGroup.rotation.z = t * 0.006 + Math.sin(t * 0.03) * 0.05 * warpIntensity;
+    }
+
+    // 5. LAYER 3B: Underwater Atmosphere FX Update (random bubbles + swaying abyssal ribbons)
+    this.underwaterGroup.visible = this.underwaterWeight > 0.015;
+    if (this.underwaterGroup.visible) {
+      const uw = this.underwaterWeight;
+      this.bubbleMat.uniforms.uOpacity.value = uw * 0.72;
+      this.bubbleMat.uniforms.uColorA.value.copy(this._curRim);
+      this.bubbleMat.uniforms.uColorB.value.copy(this._curKey);
+
+      for (let i = 0; i < this.bubbleData.length; i++) {
+        const b = this.bubbleData[i];
+        const vent = this.bubbleVents[b.ventIdx];
+        b.y += safeDt * b.riseSpeed;
+        if (b.y > 11.5) {
+          b.y = -11.5 - Math.random() * 2.5;
+          b.offsetX = (Math.random() - 0.5) * 3.8;
+          b.phase = Math.random() * Math.PI * 2;
+        }
+        const ventDrift = Math.sin(t * 0.08 + vent.phase) * 1.4;
+        const swayX = Math.sin(t * b.wobbleFreq + b.phase + b.y * 0.35) * b.wobbleAmp;
+        const swayZ = Math.cos(t * b.wobbleFreq * 0.8 + b.phase) * b.wobbleAmp * 0.5;
+        // Organic buoyant squish/wobble on larger hero bubbles
+        const squish = b.isHero ? Math.sin(t * 2.2 + b.phase) * 0.14 : Math.sin(t * 1.5 + b.phase) * 0.05;
+
+        this._dummy.position.set(vent.baseX + ventDrift + b.offsetX + swayX, b.y, vent.z + b.offsetZ + swayZ);
+        this._dummy.rotation.set(0, 0, swayX * 0.25);
+        this._dummy.scale.set(
+          b.scale * (1.0 + squish),
+          b.scale * (1.0 - squish * 0.85),
+          b.scale * (1.0 + squish * 0.5)
+        );
+        this._dummy.updateMatrix();
+        this.bubbleMesh.setMatrixAt(i, this._dummy.matrix);
+      }
+      this.bubbleMesh.instanceMatrix.needsUpdate = true;
+
+      for (let i = 0; i < this.abyssRibbons.length; i++) {
+        const r = this.abyssRibbons[i];
+        r.mat.uniforms.uTime.value = t;
+        r.mat.uniforms.uOpacity.value = uw * 0.16;
+        r.mat.uniforms.uColorA.value.copy(this._curAccent);
+        r.mat.uniforms.uColorB.value.copy(this._curRim);
+      }
+    }
+
+    // 6. Compute smooth 3D Layer weights (0..5; world 5 = Open Vista with no heavy mesh)
+    for (let i = 0; i < 6; i++) {
       let target = 0;
-      if (stepA.world3d === i) target += 1.0 - smoothMorph;
-      if (stepB.world3d === i) target += smoothMorph;
+      if (this.stepA.world3d === i) target += 1.0 - smoothMorph;
+      if (this.stepB.world3d === i) target += smoothMorph;
       this.worldWeights[i] = THREE.MathUtils.clamp(target, 0, 1);
     }
+
+    // Shared grand in-and-out depth breathing helper: glides objects gracefully from far horizon to intimate close-up
+    const sideBias = THREE.MathUtils.lerp(this.stepA.sideBias, this.stepB.sideBias, smoothMorph);
 
     // Update World 0: Sacred Geometry Tunnel (varied gossamer polygons blooming from shifting centers)
     const wTunnel = this.worldWeights[0];
     this.tunnelGroup.visible = wTunnel > 0.008;
     if (this.tunnelGroup.visible) {
-      // Airy, see-through translucency so the moving backdrop world shines straight through
       this.tunnelOuterMat.uniforms.uOpacity.value = wTunnel * 0.26;
       this.tunnelOuterMat.uniforms.uColorA.value.copy(this._curKey);
       this.tunnelOuterMat.uniforms.uColorB.value.copy(this._curRim);
@@ -1504,7 +2305,6 @@ export class DreamscapeEngine {
       this.tunnelLineMat.uniforms.uOpacity.value = wTunnel * 0.13;
       this.tunnelLineMat.uniforms.uColor.value.copy(this._curRim);
 
-      // Slowly wandering distant vanishing center & foreground focal center (multi-harmonic Lissajous drift)
       const farCenterX = -1.8 + Math.sin(t * 0.037) * 4.8 + Math.cos(t * 0.017) * 1.9;
       const farCenterY = Math.cos(t * 0.031) * 3.2 + Math.sin(t * 0.019) * 1.3;
       const nearCenterX = -1.4 + Math.sin(t * 0.029 + 1.4) * 2.4;
@@ -1519,7 +2319,6 @@ export class DreamscapeEngine {
         const ud = ring.userData;
         ring.position.z += safeDt * flowSpeed;
 
-        // When a portal recycles to the far horizon, evolve its polygon shape from the rolling family
         if (ring.position.z > 10.5) {
           ring.position.z -= this.tunnelSpan;
           const nextArchIdx = (rollingFamily + (i % 3)) % archCount;
@@ -1534,7 +2333,6 @@ export class DreamscapeEngine {
         const zFactor = THREE.MathUtils.clamp((ring.position.z + 55.5) / this.tunnelSpan, 0, 1);
         const curveT = THREE.MathUtils.smoothstep(zFactor, 0.0, 1.0);
 
-        // Curved drifting spine + gentle per-ring eccentric offset so centers shift organically across the frame
         const spineX = THREE.MathUtils.lerp(farCenterX, nearCenterX, curveT) +
           Math.sin(ring.position.z * 0.065 + t * 0.095) * 1.55;
         const spineY = THREE.MathUtils.lerp(farCenterY, nearCenterY, curveT) +
@@ -1555,10 +2353,16 @@ export class DreamscapeEngine {
       }
     }
 
-    // Update World 1: Procedural Ringed Exoplanet
+    // Update World 1: Procedural Ringed Exoplanet (grand in-and-out fly-by depth arc!)
     const wPlanet = this.worldWeights[1];
     this.planetGroup.visible = wPlanet > 0.008;
     if (this.planetGroup.visible) {
+      // Sweeps gracefully from far horizon (-17) to grand intimate close-up (+2.6) and back out
+      const flyWave = 0.5 - 0.5 * Math.cos(t * 0.058);
+      const planetZ = THREE.MathUtils.lerp(-16.5, 2.4, flyWave * wPlanet);
+      const planetX = sideBias + Math.sin(t * 0.041) * 2.2 - flyWave * 0.7;
+      const planetY = Math.cos(t * 0.036) * 1.35;
+
       this.planetCoreMat.uniforms.uTime.value = t;
       this.planetCoreMat.uniforms.uOpacity.value = wPlanet * 0.92;
       this.planetCoreMat.uniforms.uKeyColor.value.copy(this._curKey);
@@ -1581,15 +2385,14 @@ export class DreamscapeEngine {
 
       this.planetSphere.rotation.y = t * 0.055;
       this.planetRing.rotation.z = t * 0.03;
-      this.planetGroup.position.x = -2.1 + Math.sin(t * 0.045) * 1.1;
-      this.planetGroup.position.y = 0.25 + Math.cos(t * 0.038) * 0.65;
-      this.planetGroup.scale.setScalar(0.75 + 0.25 * wPlanet);
+      this.planetGroup.position.set(planetX, planetY, planetZ);
+      this.planetGroup.scale.setScalar(0.68 + 0.34 * wPlanet);
 
       this.moonA.position.set(Math.cos(t * 0.16) * 4.9, Math.sin(t * 0.16) * 1.25, Math.sin(t * 0.16) * 3.8);
       this.moonB.position.set(Math.cos(-t * 0.24 + 2.0) * 3.8, Math.sin(-t * 0.24 + 2.0) * 1.6, Math.sin(-t * 0.24 + 2.0) * 3.1);
     }
 
-    // Update World 2: Underwater Bioluminescence
+    // Update World 2: Underwater Bioluminescence (drifting jellyfish bloom in & out of depth)
     const wBio = this.worldWeights[2];
     this.biolumGroup.visible = wBio > 0.008;
     if (this.biolumGroup.visible) {
@@ -1606,14 +2409,15 @@ export class DreamscapeEngine {
       for (let i = 0; i < this.jellies.length; i++) {
         const j = this.jellies[i];
         const ud = j.userData;
-        const driftY = Math.sin(t * ud.speed + ud.phase) * 1.6;
-        const driftX = Math.cos(t * ud.speed * 0.7 + ud.phase) * 0.9;
-        j.position.set(ud.basePos.x + driftX, ud.basePos.y + driftY, ud.basePos.z);
-        j.rotation.z = Math.sin(t * 0.25 + ud.phase) * 0.18;
+        const driftY = Math.sin(t * ud.speed + ud.phase) * 1.85;
+        const driftX = Math.cos(t * ud.speed * 0.7 + ud.phase) * 1.35;
+        // Grand depth float toward and away from the viewer glass
+        const driftZ = Math.sin(t * 0.068 + ud.phase) * 4.6;
+        j.position.set(ud.basePos.x + driftX, ud.basePos.y + driftY, ud.basePos.z + driftZ);
+        j.rotation.z = Math.sin(t * 0.25 + ud.phase) * 0.20;
         j.rotation.y = t * 0.08 + ud.phase;
       }
 
-      // Update instanced bioluminescent plankton
       this.planktonMat.opacity = wBio * 0.78;
       this.planktonMat.emissive.copy(this._curRim).lerp(this._curKey, 0.4);
       for (let i = 0; i < this.planktonData.length; i++) {
@@ -1632,10 +2436,15 @@ export class DreamscapeEngine {
       this.planktonMesh.instanceMatrix.needsUpdate = true;
     }
 
-    // Update World 3: Supernova & Relativistic Accretion Vortex
+    // Update World 3: Supernova & Relativistic Accretion Vortex (approaches & recedes in depth)
     const wVortex = this.worldWeights[3];
     this.vortexGroup.visible = wVortex > 0.008;
     if (this.vortexGroup.visible) {
+      const vortexDepthWave = 0.5 - 0.5 * Math.cos(t * 0.052 + 1.1);
+      const vortexZ = THREE.MathUtils.lerp(-15.0, 1.6, vortexDepthWave * wVortex);
+      const vortexX = sideBias + Math.sin(t * 0.038 + 0.7) * 2.0;
+      const vortexY = Math.cos(t * 0.032) * 1.25;
+
       this.vortexPointsMat.opacity = wVortex * 0.85;
       this.vortexPoints.rotation.y = t * 0.065;
 
@@ -1651,8 +2460,63 @@ export class DreamscapeEngine {
       this.vortexRingA.rotation.y = t * 0.11;
       this.vortexRingB.rotation.y = -t * 0.085;
       this.vortexRingB.rotation.z = Math.cos(t * 0.12) * 0.28;
-      this.vortexGroup.rotation.z = Math.sin(t * 0.04) * 0.22;
-      this.vortexGroup.scale.setScalar(0.82 + 0.18 * wVortex);
+      this.vortexGroup.position.set(vortexX, vortexY, vortexZ);
+      this.vortexGroup.rotation.z = Math.sin(t * 0.04) * 0.24;
+      this.vortexGroup.scale.setScalar(0.76 + 0.28 * wVortex);
+    }
+
+    // Update World 4: Celestial Crystal Orrery (grand fly-by depth arc + counter-orbiting shards)
+    const wOrrery = this.worldWeights[4];
+    this.orreryGroup.visible = wOrrery > 0.008;
+    if (this.orreryGroup.visible) {
+      const orreryDepthWave = 0.5 - 0.5 * Math.cos(t * 0.055 + 2.3);
+      const orreryZ = THREE.MathUtils.lerp(-16.0, 2.2, orreryDepthWave * wOrrery);
+      const orreryX = sideBias + Math.cos(t * 0.039) * 2.1;
+      const orreryY = Math.sin(t * 0.034) * 1.3;
+
+      this.orreryRingMat.uniforms.uOpacity.value = wOrrery * 0.42;
+      this.orreryRingMat.uniforms.uColorA.value.copy(this._curKey);
+      this.orreryRingMat.uniforms.uColorB.value.copy(this._curRim);
+
+      this.orreryStarMatA.uniforms.uOpacity.value = wOrrery * 0.88;
+      this.orreryStarMatA.uniforms.uColorA.value.copy(this._curKey);
+      this.orreryStarMatA.uniforms.uColorB.value.copy(this._curAccent);
+
+      this.orreryStarMatB.uniforms.uOpacity.value = wOrrery * 0.84;
+      this.orreryStarMatB.uniforms.uColorA.value.copy(this._curRim);
+      this.orreryStarMatB.uniforms.uColorB.value.copy(this._curKey);
+
+      this.orreryShardMat.uniforms.uOpacity.value = wOrrery * 0.58;
+      this.orreryShardMat.uniforms.uColorA.value.copy(this._curRim);
+      this.orreryShardMat.uniforms.uColorB.value.copy(this._curAccent);
+
+      for (let i = 0; i < this.orreryRings.length; i++) {
+        const ring = this.orreryRings[i];
+        const dir = i % 2 === 0 ? 1 : -1;
+        ring.rotation.x += safeDt * (0.04 + i * 0.014) * dir;
+        ring.rotation.y += safeDt * (0.055 - i * 0.008) * -dir;
+      }
+
+      // Binary twin stars gracefully waltzing around each other
+      this.orreryStarA.position.set(Math.cos(t * 0.28) * 0.85, Math.sin(t * 0.22) * 0.35, Math.sin(t * 0.28) * 0.85);
+      this.orreryStarB.position.set(-Math.cos(t * 0.28) * 1.15, -Math.sin(t * 0.22) * 0.45, -Math.sin(t * 0.28) * 1.15);
+
+      for (let i = 0; i < this.orreryShards.length; i++) {
+        const sh = this.orreryShards[i];
+        const ud = sh.userData;
+        const ang = t * ud.orbitSpeed + ud.phase;
+        const r = ud.orbitRadius;
+        sh.position.set(
+          Math.cos(ang) * r,
+          Math.sin(ang) * r * Math.sin(ud.inclination),
+          Math.sin(ang) * r * Math.cos(ud.inclination)
+        );
+        sh.rotation.y = -ang;
+        sh.rotation.z = Math.sin(t * 0.3 + ud.phase) * 0.45;
+      }
+
+      this.orreryGroup.position.set(orreryX, orreryY, orreryZ);
+      this.orreryGroup.scale.setScalar(0.75 + 0.28 * wOrrery);
     }
   }
 
