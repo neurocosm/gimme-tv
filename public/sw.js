@@ -6,7 +6,7 @@
  * redirects, and PWA standalone launches on Smart TVs, tablets, and phones never loop.
  */
 
-const BUILD_VERSION = 'v1.11202026.1005';
+const BUILD_VERSION = 'v1.11252026.2318';
 const SHELL_CACHE = `gimme-tv-shell-${BUILD_VERSION}`;
 
 const SHELL_ASSETS = [
@@ -83,6 +83,7 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/manifest.json' ||
     url.pathname === '/style.css' ||
     url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/vendor/') ||
     url.pathname.startsWith('/api/') ||
     url.pathname.startsWith('/@')
   ) {

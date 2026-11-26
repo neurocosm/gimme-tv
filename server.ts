@@ -175,6 +175,11 @@ async function createApp() {
     // Pure Express dev serving — zero Vite HMR client injection, zero WebSocket reconnect loops, zero JS-wrapped CSS
     const PUBLIC_DIR = path.join(__dirname, 'public');
     const SRC_DIR = path.join(__dirname, 'src');
+    const THREE_DIR = path.join(__dirname, 'node_modules', 'three');
+    const DEV_IMPORT_MAP =
+      '<script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/examples/jsm/"}}</script>\n  ';
+
+    app.use('/vendor/three', express.static(THREE_DIR));
 
     app.use(
       express.static(PUBLIC_DIR, {
@@ -214,8 +219,18 @@ async function createApp() {
     app.use((req, res, next) => {
       if (!isHtmlNavigationRequest(req)) return next();
       setNoStoreHeaders(res);
-      res.type('text/html; charset=utf-8');
-      res.sendFile(path.join(__dirname, 'index.html'));
+      const htmlPath = path.join(__dirname, 'index.html');
+      let html = fs.readFileSync(htmlPath, 'utf-8');
+      html = html.replace(
+        '<script type="module" src="/src/main.js"></script>',
+        `${DEV_IMPORT_MAP}<script type="module" src="/src/main.js"></script>`
+      );
+      res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' });
+      if (req.method === 'HEAD') {
+        res.end();
+      } else {
+        res.end(html);
+      }
     });
   }
 

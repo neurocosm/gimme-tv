@@ -38,6 +38,9 @@
 
     <!-- Edge Ambient Vignette Overlay -->
     <div class="stage-vignette" aria-hidden="true"></div>
+
+    <!-- Alternate Generative Three.js Dreamscape Layer (toggled via lower-right HUD dot) -->
+    <div id="dreamscape-stage" class="dreamscape-stage" aria-hidden="true"></div>
   </main>
 
   <!-- Bottom-Left Minimal Artwork Attribution -->
@@ -45,6 +48,13 @@
     <span id="hud-art-title" class="caption-title"></span>
     <span id="hud-art-artist-wrap" class="caption-meta" style="display: none;"><span class="caption-sep">—</span><span id="hud-art-artist"></span><span id="hud-art-year-wrap" style="display: none;">, <span id="hud-art-year"></span></span></span>
     <span id="hud-art-source-wrap" class="caption-source" style="display: none;"><span class="caption-dot">·</span><span id="hud-art-source-name"></span></span>
+  </div>
+
+  <!-- Bottom-Left Minimal Rotating Dreamscape Mode Title (shown only in Dreamscape Mode) -->
+  <div id="dreamscape-title" class="dreamscape-title" aria-live="polite" aria-hidden="true">
+    <span id="dreamscape-mode-name" class="dreamscape-mode-name">AETHER</span>
+    <span class="caption-dot">·</span>
+    <span id="dreamscape-subtitle" class="dreamscape-subtitle">Astral Horizon</span>
   </div>
 
   <!-- Floating Right-Hand Narrow Stacked Ambient HUD -->
@@ -136,7 +146,7 @@
 
     <!-- 6. Build Versioning Stamp & PWA Controls -->
     <footer class="hud-footer">
-      <button id="hud-build-stamp" class="build-stamp-btn" title="Tap to check for updates" aria-label="Version. Tap to check for updates">v1.11202026.1005</button>
+      <button id="hud-build-stamp" class="build-stamp-btn" title="Tap to check for updates" aria-label="Version. Tap to check for updates">v1.11252026.2318</button>
       <button id="pwa-install-btn" class="pwa-install-btn" title="Install Gimme TV as PWA" style="display: none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -146,6 +156,18 @@
         <span>Install</span>
       </button>
     </footer>
+
+    <!-- Lower-Right Mirror Mode Dot (Opposite top-right green wake dot — tap to toggle Dreamscape world) -->
+    <button
+      id="mode-toggle-dot"
+      class="mode-corner-dot-btn"
+      type="button"
+      title="Switch to Generative Dreamscape Mode (M)"
+      aria-label="Toggle Generative Dreamscape Mode"
+      aria-pressed="false"
+    >
+      <span class="mode-corner-dot" aria-hidden="true"></span>
+    </button>
   </aside>
 
   <script type="module" src="/src/main.js"></script>

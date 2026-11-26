@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11202026.1005';
+export const APP_BUILD_VERSION = 'v1.11252026.2318';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -1333,6 +1333,7 @@ function dealBalancedDeckFromPools(allowPartialDrain = false) {
     ) {
       bootUpgradeTimer = setTimeout(() => {
         bootUpgradeTimer = null;
+        if (isDreamscapeMode) return;
         if (!hasBootAutoAdvanced && currentQueueIndex === 0 && artworkQueue.length > 1) {
           hasBootAutoAdvanced = true;
           transitionToNextArtwork();
@@ -1455,25 +1456,162 @@ function initializeArtworkEngine() {
 }
 
 /**
+ * ----------------------------------------------------
+ * ALTERNATE MODE: THREE.JS GENERATIVE DREAMSCAPE
+ * Toggled via lower-right mirror HUD dot or 'M' / ArrowUp
+ * ----------------------------------------------------
+ */
+const DISPLAY_MODE_STORAGE_KEY = 'gimme_tv_display_mode';
+const dreamscapeStageEl = document.getElementById('dreamscape-stage');
+const modeToggleDotBtn = document.getElementById('mode-toggle-dot');
+const dreamscapeTitleEl = document.getElementById('dreamscape-title');
+const dreamscapeModeNameEl = document.getElementById('dreamscape-mode-name');
+const dreamscapeSubtitleEl = document.getElementById('dreamscape-subtitle');
+
+let isDreamscapeMode = false;
+let dreamscapeEngine = null;
+let isDreamscapeLoading = false;
+let dreamscapeTitleFadeTimer = null;
+
+function updateDreamscapeTitleUI({ modeName, subtitle }) {
+  if (!dreamscapeTitleEl || !dreamscapeModeNameEl || !dreamscapeSubtitleEl) return;
+  if (dreamscapeTitleFadeTimer) {
+    clearTimeout(dreamscapeTitleFadeTimer);
+    dreamscapeTitleFadeTimer = null;
+  }
+
+  dreamscapeTitleEl.classList.add('fading');
+  dreamscapeTitleFadeTimer = setTimeout(() => {
+    dreamscapeModeNameEl.textContent = modeName || 'AETHER';
+    dreamscapeSubtitleEl.textContent = subtitle || '';
+    dreamscapeTitleEl.classList.remove('fading');
+    dreamscapeTitleFadeTimer = null;
+  }, 420);
+}
+
+async function setDreamscapeMode(enabled, persist = true) {
+  const nextState = Boolean(enabled);
+  if (nextState === isDreamscapeMode && (!nextState || dreamscapeEngine)) return;
+
+  isDreamscapeMode = nextState;
+  if (persist) {
+    try {
+      localStorage.setItem(DISPLAY_MODE_STORAGE_KEY, nextState ? 'dreamscape' : 'gallery');
+    } catch (_err) {}
+  }
+
+  if (modeToggleDotBtn) {
+    modeToggleDotBtn.setAttribute('aria-pressed', String(nextState));
+    modeToggleDotBtn.title = nextState
+      ? 'Return to Art Gallery Mode (M)'
+      : 'Switch to Generative Dreamscape Mode (M)';
+  }
+
+  if (nextState) {
+    // Pause museum slideshow rotation while Dreamscape is active
+    if (rotationTimer) {
+      clearInterval(rotationTimer);
+      rotationTimer = null;
+    }
+
+    document.body.classList.add('dreamscape-active');
+    if (dreamscapeStageEl) dreamscapeStageEl.setAttribute('aria-hidden', 'false');
+    if (dreamscapeTitleEl) dreamscapeTitleEl.setAttribute('aria-hidden', 'false');
+
+    if (!dreamscapeEngine && !isDreamscapeLoading && dreamscapeStageEl) {
+      isDreamscapeLoading = true;
+      try {
+        const { DreamscapeEngine } = await import('./dreamscape.js');
+        if (!isDreamscapeMode) {
+          isDreamscapeLoading = false;
+          return;
+        }
+        dreamscapeEngine = new DreamscapeEngine(dreamscapeStageEl, {
+          onTitleChange: updateDreamscapeTitleUI,
+        });
+        dreamscapeEngine.start();
+      } catch (err) {
+        console.error('[Dreamscape] Failed to initialize Three.js world:', err);
+        isDreamscapeLoading = false;
+        setDreamscapeMode(false, false);
+        return;
+      }
+      isDreamscapeLoading = false;
+    } else if (dreamscapeEngine) {
+      dreamscapeEngine.start();
+      updateDreamscapeTitleUI(dreamscapeEngine.getCurrentTitle());
+    }
+  } else {
+    document.body.classList.remove('dreamscape-active');
+    if (dreamscapeStageEl) dreamscapeStageEl.setAttribute('aria-hidden', 'true');
+    if (dreamscapeTitleEl) dreamscapeTitleEl.setAttribute('aria-hidden', 'true');
+
+    // Pause WebGL loop cleanly after fade-out so Gallery mode uses 0% GPU
+    if (dreamscapeEngine) {
+      setTimeout(() => {
+        if (!isDreamscapeMode && dreamscapeEngine) {
+          dreamscapeEngine.pause();
+        }
+      }, 1550);
+    }
+
+    startRotationCycle();
+  }
+}
+
+function toggleDreamscapeMode() {
+  setDreamscapeMode(!isDreamscapeMode, true);
+}
+
+/**
  * User Interaction Listeners (Tap / Remote Click / Keyboard)
  */
 function setupUserControls() {
-  // Tap anywhere on the stage advances immediately
+  // Lower-right mirror HUD dot toggles Generative Dreamscape Mode
+  if (modeToggleDotBtn) {
+    modeToggleDotBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleDreamscapeMode();
+    });
+  }
+
+  // Tap anywhere on the stage advances artwork (or gently nudges next Dreamscape morph)
   if (stageEl) {
     stageEl.addEventListener('click', () => {
+      if (isDreamscapeMode) {
+        if (dreamscapeEngine) dreamscapeEngine.nudgeNext();
+        return;
+      }
       transitionToNextArtwork();
       startRotationCycle(); // Reset timer
     });
   }
 
-  // Keyboard navigation for TV Remote (D-Pad right, Enter, Space)
+  // Keyboard navigation for TV Remote (M / ArrowUp toggles Dreamscape; Right/Enter/Space advances)
   window.addEventListener('keydown', (e) => {
+    if (e.key === 'm' || e.key === 'M' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      toggleDreamscapeMode();
+      return;
+    }
+
     if (['ArrowRight', 'ArrowDown', 'Enter', ' ', 'MediaTrackNext'].includes(e.key)) {
       e.preventDefault();
+      if (isDreamscapeMode) {
+        if (dreamscapeEngine) dreamscapeEngine.nudgeNext();
+        return;
+      }
       transitionToNextArtwork();
       startRotationCycle(); // Reset timer
     }
   });
+
+  // Restore saved display mode if user left TV in Dreamscape Mode
+  try {
+    if (localStorage.getItem(DISPLAY_MODE_STORAGE_KEY) === 'dreamscape') {
+      setDreamscapeMode(true, false);
+    }
+  } catch (_err) {}
 }
 
 // Initial Boot Sequence
