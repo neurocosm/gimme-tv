@@ -179,7 +179,7 @@ const PALETTES = [
   },
 ];
 
-// Layer 1 Full-Screen Procedural Shader Worlds (0..10)
+// Layer 1 Full-Screen Procedural Shader Worlds (0..12)
 const SHADER_WORLDS = [
   { id: 0, key: 'julia', noun: 'Filament', aquatic: false },
   { id: 1, key: 'kaleidoscope', noun: 'Mandala', aquatic: false },
@@ -192,9 +192,11 @@ const SHADER_WORLDS = [
   { id: 8, key: 'mycelium', noun: 'Mycelium', aquatic: false },
   { id: 9, key: 'canopy', noun: 'Canopy', aquatic: false },
   { id: 10, key: 'cloudscape', noun: 'Cirrus', aquatic: false },
+  { id: 11, key: 'silkFire', noun: 'Ember', aquatic: false },
+  { id: 12, key: 'stormLightning', noun: 'Tempest', aquatic: false },
 ];
 
-// Layer 2 Translucent 3D Worlds (0..8)
+// Layer 2 Translucent 3D Worlds (0..13)
 const THREE_WORLDS = [
   { id: 0, key: 'tunnel', noun: 'Sanctuary', aquatic: false },
   { id: 1, key: 'planet', noun: 'Horizon', aquatic: false },
@@ -205,24 +207,31 @@ const THREE_WORLDS = [
   { id: 6, key: 'mushrooms', noun: 'Mycelia', aquatic: false },
   { id: 7, key: 'willow', noun: 'Willow', aquatic: false },
   { id: 8, key: 'icicles', noun: 'Glacier', aquatic: false },
+  { id: 9, key: 'galaxy', noun: 'Andromeda', aquatic: false },
+  { id: 10, key: 'hearts', noun: 'Pulse', aquatic: false },
+  { id: 11, key: 'constellations', noun: 'Constellation', aquatic: false },
+  { id: 12, key: 'eclipse', noun: 'Corona', aquatic: false },
+  { id: 13, key: 'manta', noun: 'Manta', aquatic: true },
 ];
 
-// Layer 3 Modular Atmospheric FX Keys (0..5)
-const ATMOS_TYPES = ['stars', 'underwater', 'forest', 'snow', 'rain', 'embers'];
+// Layer 3 Modular Atmospheric FX Keys (0..7)
+const ATMOS_TYPES = ['stars', 'underwater', 'forest', 'snow', 'rain', 'embers', 'lanterns', 'comets'];
 
-// Harmonious 3D pairings per shader world
+// Harmonious 3D pairings per shader world (~70% of draws; ~30% use subtle cross-realm Dream Skew)
 const SHADER_AFFINITY = {
-  0: [0, 3, 4, 6, 5],       // Julia Fractal -> Tunnel, Vortex, Orrery, Mushrooms, Open Vista
-  1: [0, 4, 6, 3, 5],       // Kaleidoscope -> Tunnel, Orrery, Mushrooms, Vortex, Open Vista
-  2: [0, 7, 8, 4, 5],       // Stained Glass -> Tunnel, Willow, Icicles, Orrery, Open Vista
-  3: [1, 3, 4, 5],          // Cosmic Nebula -> Exoplanet, Vortex, Orrery, Open Vista
-  4: [2, 5, 0],             // Underwater Caustics -> Bioluminescence Reef, Open Vista, Tunnel
-  5: [8, 5, 4, 1, 7],       // Silk Aurora -> Icicles, Open Vista, Orrery, Exoplanet, Willow
-  6: [6, 5, 0, 4, 2],       // Liquid Oil -> Mushrooms, Open Vista, Tunnel, Orrery, Reef
-  7: [8, 4, 0, 5],          // Prism Crystal Geode -> Icicles, Orrery, Tunnel, Open Vista
-  8: [6, 7, 0, 5],          // Luminous Mycelial Web -> Mushrooms, Willow, Tunnel, Open Vista
-  9: [7, 6, 5, 0],          // Fractal Fern Canopy -> Willow, Mushrooms, Open Vista, Tunnel
-  10: [5, 8, 7, 1, 4],      // Drifting Cloudscape -> Open Vista, Icicles, Willow, Exoplanet, Orrery
+  0: [0, 3, 4, 10, 11, 5],       // Julia Fractal -> Tunnel, Vortex, Orrery, Hearts, Constellations, Open Vista
+  1: [0, 4, 10, 6, 3, 5],        // Kaleidoscope -> Tunnel, Orrery, Hearts, Mushrooms, Vortex, Open Vista
+  2: [0, 7, 8, 10, 4, 5],        // Stained Glass -> Tunnel, Willow, Icicles, Hearts, Orrery, Open Vista
+  3: [9, 11, 12, 1, 3, 4, 5],    // Cosmic Nebula -> Galaxy, Constellations, Eclipse, Exoplanet, Vortex, Orrery, Open Vista
+  4: [13, 2, 5, 0],              // Underwater Caustics -> Manta, Bioluminescence Reef, Open Vista, Tunnel
+  5: [11, 8, 9, 10, 5, 4, 1],    // Silk Aurora -> Constellations, Icicles, Galaxy, Hearts, Open Vista, Orrery, Exoplanet
+  6: [10, 6, 13, 5, 0, 4],       // Liquid Oil -> Hearts, Mushrooms, Manta, Open Vista, Tunnel, Orrery
+  7: [8, 10, 11, 4, 0, 5],       // Prism Crystal Geode -> Icicles, Hearts, Constellations, Orrery, Tunnel, Open Vista
+  8: [6, 7, 10, 0, 5],           // Luminous Mycelial Web -> Mushrooms, Willow, Hearts, Tunnel, Open Vista
+  9: [7, 6, 5, 10, 0],           // Fractal Fern Canopy -> Willow, Mushrooms, Open Vista, Hearts, Tunnel
+  10: [12, 5, 11, 10, 8, 7, 1],  // Drifting Cloudscape -> Eclipse, Open Vista, Constellations, Hearts, Icicles, Willow, Exoplanet
+  11: [5, 10, 12, 0, 3, 4],      // Silk Fire / Solar Flames -> Open Vista, Hearts, Eclipse, Tunnel, Vortex, Orrery
+  12: [5, 11, 12, 8, 1, 9],      // Deep Storm & Silent Lightning -> Open Vista, Constellations, Eclipse, Icicles, Exoplanet, Galaxy
 };
 
 // Meditative lava-lamp timings (offset so worlds & color moods continually recombine)
@@ -732,6 +741,88 @@ const BACKDROP_FRAGMENT_SHADER = `
     return col * 0.92;
   }
 
+  // World 11: Silk Fire / Solar Flames (slow-motion undulating liquid flame ribbons rising into dark velvet sky)
+  vec3 renderSilkFire(vec2 p, float t) {
+    float rise1 = t * 0.14;
+    float rise2 = t * 0.21;
+
+    // Gentle upward vertical fade so upper screen remains calm and open
+    float heightFade = smoothstep(1.05, -0.82, p.y);
+    float emberBase = smoothstep(0.35, -1.05, p.y);
+
+    // Two layered slow-motion warped silk ribbons
+    vec2 q1 = vec2(p.x * 1.15 + sin(p.y * 1.6 - rise1) * 0.18, p.y * 0.9 - rise1);
+    float w1 = fbm(q1 * 1.65 + vec2(fbm(q1 * 1.2 + 2.3), -rise1 * 0.4));
+
+    vec2 q2 = vec2(p.x * 1.65 - cos(p.y * 2.0 - rise2) * 0.14, p.y * 1.15 - rise2);
+    float w2 = fbm(q2 * 2.05 + vec2(-w1 * 0.85, w1 * 0.55));
+
+    float flameVeil = smoothstep(0.28, 0.84, w1 * 0.62 + w2 * 0.52) * heightFade;
+    float hotCore = pow(clamp(flameVeil * (0.65 + 0.55 * emberBase), 0.0, 1.0), 2.1);
+    float silkEdge = smoothstep(0.42, 0.72, w2) * smoothstep(0.92, -0.55, p.y) * 0.45;
+
+    // Velvety dark backdrop enriched by active palette warmed toward molten amber/crimson
+    vec3 deepBg = palette(0.74 + p.y * 0.14 + t * 0.01) * (0.14 + 0.16 * emberBase);
+    vec3 fireMid = mix(palette(0.18 + w1 * 0.45 + t * 0.015), vec3(0.95, 0.34, 0.12), 0.36);
+    vec3 fireGold = mix(palette(0.06 + w2 * 0.25 + t * 0.02), vec3(1.0, 0.78, 0.38), 0.42);
+
+    vec3 col = deepBg + fireMid * flameVeil * 0.78 + fireGold * (hotCore * 0.85 + silkEdge * 0.42);
+    return col * 0.92;
+  }
+
+  // World 12: Deep Storm & Silent Heat Lightning (twilight storm clouds with calm slow-motion branching arcs)
+  vec3 renderStormLightning(vec2 p, float t) {
+    vec2 drift1 = vec2(t * 0.024, sin(t * 0.014) * 0.04);
+    vec2 drift2 = vec2(t * 0.042, -cos(t * 0.012) * 0.03);
+
+    vec2 q1 = p * vec2(0.88, 1.25) - drift1;
+    vec2 warp = vec2(fbm(q1 * 1.1 + 3.1), fbm(q1 * 1.1 + 7.9));
+    float cloudA = fbm(q1 * 1.6 + warp * 1.25);
+    float cloudB = fbm((p * vec2(1.4, 1.9) - drift2) * 1.7 + warp * 0.65);
+
+    // Calm slow-motion heat-lightning envelope (~7.5s cycle, smooth bloom & long soft afterglow — never harsh strobing)
+    float cycle = t * 0.135;
+    float epoch = floor(cycle);
+    float phase = fract(cycle);
+    float arcEnv = smoothstep(0.06, 0.20, phase) * (1.0 - smoothstep(0.22, 0.56, phase));
+    float afterglow = smoothstep(0.04, 0.24, phase) * (1.0 - smoothstep(0.24, 0.78, phase));
+
+    // Gently randomized horizontal origin per storm cycle (biased left of right-hand HUD)
+    float originX = -0.95 + hash21(vec2(epoch, 17.3)) * 1.45;
+    float slant = (hash21(vec2(epoch, 41.7)) - 0.5) * 0.45;
+
+    // Main curved branching lightning filament
+    float yNorm = clamp((0.95 - p.y) * 0.55, 0.0, 1.0);
+    float jitter = (fbm(vec2(p.y * 3.4 + epoch * 4.7, epoch * 1.9)) - 0.5) * 0.42;
+    float boltX = originX + slant * yNorm + jitter * smoothstep(0.0, 0.35, yNorm);
+    float dMain = abs(p.x - boltX);
+
+    // Secondary delicate side fork emerging mid-cloud
+    float forkStart = 0.28 + hash21(vec2(epoch, 9.1)) * 0.24;
+    float forkDir = hash21(vec2(epoch, 63.2)) > 0.5 ? 1.0 : -1.0;
+    float forkT = max(yNorm - forkStart, 0.0);
+    float forkJitter = (vnoise(vec2(p.y * 6.5 + epoch * 3.1, 2.7)) - 0.5) * 0.16;
+    float forkX = boltX + forkDir * forkT * 0.62 + forkJitter * smoothstep(0.0, 0.2, forkT);
+    float dFork = abs(p.x - forkX) + (yNorm < forkStart ? 10.0 : 0.0);
+
+    float verticalWindow = smoothstep(-0.85, -0.35, p.y) * smoothstep(1.05, 0.55, p.y);
+    float mainCore = exp(-dMain * 42.0) * verticalWindow;
+    float mainAura = exp(-dMain * 6.5) * verticalWindow;
+    float forkCore = exp(-dFork * 52.0) * smoothstep(-0.75, -0.25, p.y) * smoothstep(0.65, 0.0, forkT);
+
+    // Internal cloud illumination around the silent bolt
+    float cloudScatter = exp(-length(p - vec2(originX + slant * 0.4, 0.18)) * 1.25) * (0.45 + 0.65 * cloudA);
+
+    vec3 twilightSky = palette(0.76 + p.y * 0.18 + t * 0.008) * 0.22;
+    vec3 stormClouds = palette(0.54 + cloudA * 0.32 + cloudB * 0.16) * (0.20 + 0.38 * smoothstep(0.28, 0.82, cloudA));
+    vec3 boltTint = mix(palette(0.14 + t * 0.012), vec3(0.84, 0.93, 1.0), 0.55);
+
+    vec3 col = mix(twilightSky, stormClouds, 0.78);
+    col += boltTint * cloudScatter * afterglow * 0.68;
+    col += boltTint * (mainAura * 0.42 + (mainCore + forkCore * 0.72) * 1.15) * arcEnv;
+    return col * 0.90;
+  }
+
   vec3 sampleWorld(float id, vec2 p, float t) {
     if (id < 0.5) return renderJulia(p, t);
     if (id < 1.5) return renderKaleidoscope(p, t);
@@ -743,7 +834,9 @@ const BACKDROP_FRAGMENT_SHADER = `
     if (id < 7.5) return renderPrismGeode(p, t);
     if (id < 8.5) return renderMycelium(p, t);
     if (id < 9.5) return renderCanopy(p, t);
-    return renderCloudscape(p, t);
+    if (id < 10.5) return renderCloudscape(p, t);
+    if (id < 11.5) return renderSilkFire(p, t);
+    return renderStormLightning(p, t);
   }
 
   void main() {
@@ -1233,6 +1326,190 @@ const ICE_CRYSTAL_FRAGMENT_SHADER = `
   }
 `;
 
+// Instanced Floating Paper Sky Lantern Shader
+const LANTERN_VERTEX_SHADER = `
+  varying vec2 vUv;
+  varying vec3 vNormal;
+  varying vec3 vViewPos;
+  varying float vSeed;
+  void main() {
+    vUv = uv;
+    vec4 instOrigin = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    vSeed = fract(sin(dot(instOrigin.xz, vec2(12.9898, 78.233))) * 43758.5453);
+    mat4 mvMat = modelViewMatrix * instanceMatrix;
+    vec4 mvPos = mvMat * vec4(position, 1.0);
+    vViewPos = -mvPos.xyz;
+    vNormal = normalize(mat3(mvMat) * normal);
+    gl_Position = projectionMatrix * mvPos;
+  }
+`;
+
+const LANTERN_FRAGMENT_SHADER = `
+  precision highp float;
+  varying vec2 vUv;
+  varying vec3 vNormal;
+  varying vec3 vViewPos;
+  varying float vSeed;
+  uniform float uTime;
+  uniform vec3 uColorWarm;
+  uniform vec3 uColorRim;
+  uniform float uOpacity;
+  void main() {
+    vec3 n = normalize(vNormal);
+    vec3 v = normalize(vViewPos);
+    float fres = pow(1.0 - abs(dot(n, v)), 1.6);
+    float candleCore = smoothstep(1.0, 0.02, vUv.y);
+    float ribs = 0.88 + 0.12 * cos(vUv.x * 37.699);
+    float flicker = 0.88 + 0.12 * sin(uTime * 2.4 + vSeed * 25.0) * cos(uTime * 1.5 + vSeed * 11.0);
+    vec3 col = mix(uColorRim, uColorWarm, candleCore * 0.78 + 0.18) * ribs * (0.75 + 0.65 * candleCore) * flicker;
+    col += vec3(1.0, 0.92, 0.72) * pow(candleCore, 3.0) * 0.55;
+    float alpha = clamp((0.36 + 0.45 * candleCore + 0.25 * fres) * uOpacity, 0.0, 0.88);
+    gl_FragColor = vec4(col, alpha);
+  }
+`;
+
+// Solar Eclipse & Diamond Corona Disc Shader
+const ECLIPSE_CORONA_VERTEX_SHADER = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const ECLIPSE_CORONA_FRAGMENT_SHADER = `
+  precision highp float;
+  varying vec2 vUv;
+  uniform float uTime;
+  uniform vec3 uColorCore;
+  uniform vec3 uColorHalo;
+  uniform float uOpacity;
+  void main() {
+    vec2 uv = (vUv - 0.5) * 2.0;
+    float r = length(uv);
+    float ang = atan(uv.y, uv.x);
+
+    // Inner lunar edge radius ~ 0.305
+    float limb = 0.305;
+    float outside = smoothstep(limb - 0.02, limb + 0.015, r);
+
+    // Sweeping equatorial & polar corona plasma streamers
+    float stream1 = 0.55 + 0.45 * sin(ang * 2.0 + uTime * 0.09);
+    float stream2 = 0.50 + 0.50 * sin(ang * 5.0 - uTime * 0.14 + r * 3.8);
+    float fineRays = 0.65 + 0.35 * sin(ang * 13.0 + uTime * 0.22 - r * 5.2);
+    float coronaDecay = exp(-(r - limb) * (3.6 - 1.35 * stream1));
+    float innerRing = exp(-abs(r - limb) * 34.0);
+
+    // Slowly orbiting Diamond Ring specular flare right on the lunar limb
+    float diamondAngle = uTime * 0.16 + 0.85;
+    vec2 diamondPos = vec2(cos(diamondAngle), sin(diamondAngle)) * (limb + 0.008);
+    float dDist = length(uv - diamondPos);
+    float diamondPulse = 0.75 + 0.25 * sin(uTime * 0.65);
+    float diamondCore = exp(-dDist * 22.0) * diamondPulse;
+    float diamondStar = exp(-dDist * 7.5) * (0.45 + 0.55 * pow(abs(cos((atan(uv.y - diamondPos.y, uv.x - diamondPos.x) - diamondAngle) * 2.0)), 6.0)) * diamondPulse;
+
+    float edgeFade = smoothstep(1.0, 0.65, r);
+    float coronaMask = coronaDecay * (0.42 + 0.58 * stream2 * fineRays) * outside * edgeFade;
+
+    vec3 col = mix(uColorHalo, uColorCore, clamp(innerRing * 0.8 + coronaDecay * 0.55, 0.0, 1.0));
+    col = col * (coronaMask * 0.95 + innerRing * 0.95)
+      + mix(uColorCore, vec3(1.0, 0.98, 0.92), 0.7) * (diamondCore * 1.4 + diamondStar * 0.55);
+
+    float alpha = clamp((coronaMask * 0.82 + innerRing * 0.85 + diamondCore * 1.1 + diamondStar * 0.4) * edgeFade * uOpacity, 0.0, 0.95);
+    gl_FragColor = vec4(col, alpha);
+  }
+`;
+
+// Undulating Bioluminescent Manta Ray Shader
+const MANTA_VERTEX_SHADER = `
+  varying vec2 vUv;
+  varying vec3 vNormal;
+  varying vec3 vViewPos;
+  varying vec3 vLocalPos;
+  uniform float uTime;
+  uniform float uPhase;
+  void main() {
+    vUv = uv;
+    vec3 pos = position;
+    // Traveling undulating wingbeat from nose (+z) to trailing edge (-z) and outward along wingspan (|x|)
+    float span = abs(pos.x);
+    float wingFactor = smoothstep(0.18, 2.75, span);
+    float wavePhase = uTime * 1.35 + uPhase - span * 0.72 + pos.z * 0.45;
+    float flap = sin(wavePhase) * 0.52 * wingFactor * wingFactor;
+    pos.y += flap;
+
+    // Gentle whip-tail trailing sine wave behind the body (z < -0.75)
+    float tailFactor = smoothstep(-0.65, -2.55, pos.z);
+    pos.y += sin(uTime * 1.55 + uPhase + pos.z * 1.65) * 0.24 * tailFactor;
+    pos.x += cos(uTime * 1.05 + uPhase + pos.z * 1.25) * 0.16 * tailFactor;
+
+    vLocalPos = pos;
+    vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
+    vViewPos = -mvPos.xyz;
+    vNormal = normalize(normalMatrix * normal);
+    gl_Position = projectionMatrix * mvPos;
+  }
+`;
+
+const MANTA_FRAGMENT_SHADER = `
+  precision highp float;
+  varying vec2 vUv;
+  varying vec3 vNormal;
+  varying vec3 vViewPos;
+  varying vec3 vLocalPos;
+  uniform float uTime;
+  uniform vec3 uColorBody;
+  uniform vec3 uColorGlow;
+  uniform float uOpacity;
+  void main() {
+    vec3 n = normalize(vNormal);
+    vec3 v = normalize(vViewPos);
+    float fres = pow(1.0 - abs(dot(n, v)), 1.85);
+
+    // Subtle bioluminescent wing markings & spine pulse
+    float spine = exp(-abs(vLocalPos.x) * 3.8) * smoothstep(-2.4, 0.85, vLocalPos.z);
+    float wingEdge = smoothstep(1.15, 2.55, abs(vLocalPos.x));
+    float spotWave = pow(max(0.0, sin(vLocalPos.x * 5.8) * cos(vLocalPos.z * 5.2 + uTime * 0.35)), 4.0)
+      * smoothstep(0.25, 1.45, abs(vLocalPos.x)) * smoothstep(-1.1, 0.5, vLocalPos.z);
+    float pulse = 0.78 + 0.22 * sin(uTime * 0.85 - abs(vLocalPos.x) * 1.1);
+
+    vec3 col = mix(uColorBody, uColorGlow, clamp(fres * 0.65 + wingEdge * 0.4 + spine * 0.45, 0.0, 1.0));
+    col += uColorGlow * (spotWave * 0.85 + spine * 0.38) * pulse;
+    float alpha = clamp((0.22 + 0.56 * fres + 0.24 * wingEdge + 0.22 * spine + spotWave * 0.3) * uOpacity, 0.0, 0.84);
+    gl_FragColor = vec4(col, alpha);
+  }
+`;
+
+// Living Star-Map Constellation Line Shader (slowly breathing gossamer starlight edges)
+const CONSTELLATION_LINE_VERTEX_SHADER = `
+  attribute float aProgress;
+  attribute float aSeed;
+  varying float vProgress;
+  varying float vSeed;
+  void main() {
+    vProgress = aProgress;
+    vSeed = aSeed;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const CONSTELLATION_LINE_FRAGMENT_SHADER = `
+  precision highp float;
+  varying float vProgress;
+  varying float vSeed;
+  uniform float uTime;
+  uniform vec3 uColorA;
+  uniform vec3 uColorB;
+  uniform float uOpacity;
+  void main() {
+    float wave = 0.55 + 0.45 * sin(vProgress * 6.28318 - uTime * 0.65 + vSeed * 19.0);
+    float breathe = 0.48 + 0.52 * sin(uTime * 0.28 + vSeed * 11.3);
+    vec3 col = mix(uColorA, uColorB, vProgress * 0.6 + 0.2 * wave);
+    float alpha = clamp(wave * breathe * uOpacity, 0.0, 0.78);
+    gl_FragColor = vec4(col, alpha);
+  }
+`;
+
 // ============================================================
 // DREAMSCAPE ENGINE CLASS
 // ============================================================
@@ -1253,6 +1530,10 @@ export class DreamscapeEngine {
     this._warmEmberA = new THREE.Color('#ff9f43');
     this._warmEmberB = new THREE.Color('#ff4d4d');
     this._iceTint = new THREE.Color('#e0f2fe');
+    this._lanternWarm = new THREE.Color('#ffbe6b');
+    this._eclipseGold = new THREE.Color('#fde68a');
+    this._heartRose = new THREE.Color('#fb7185');
+    this._mantaGlow = new THREE.Color('#38bdf8');
     this._curPalA = new THREE.Vector3();
     this._curPalB = new THREE.Vector3();
     this._curPalC = new THREE.Vector3();
@@ -1299,7 +1580,7 @@ export class DreamscapeEngine {
     this.modeNameIdx = Math.floor(Math.random() * MODE_NAMES.length);
     this.lastTitleKey = '';
 
-    // 3D World weights (0..8) & 6 Atmospheric FX weights
+    // 3D World weights (0..13) & 8 Atmospheric FX weights
     this.worldWeights = new Array(THREE_WORLDS.length).fill(0);
     this.atmosWeights = {
       stars: 0,
@@ -1308,6 +1589,8 @@ export class DreamscapeEngine {
       snow: 0,
       rain: 0,
       embers: 0,
+      lanterns: 0,
+      comets: 0,
     };
     this.atmosWeights[this.stepA.atmos] = 1.0;
     this.warpClock = Math.random() * 110;
@@ -1316,15 +1599,17 @@ export class DreamscapeEngine {
     this._initScene();
     this._initBackdrop();
 
-    // Layer 3: 6 Modular Atmospheric FX Layers
+    // Layer 3: 8 Modular Atmospheric FX Layers
     this._initWarpStarfield();
     this._initUnderwaterFX();
     this._initForestFX();
     this._initSnowFX();
     this._initRainFX();
     this._initEmberFX();
+    this._initLanternFX();
+    this._initCometFX();
 
-    // Layer 2: 8 Active 3D Centerpiece Worlds (+ world 5 Open Vista)
+    // Layer 2: 13 Active 3D Centerpiece Worlds (+ world 5 Open Vista)
     this._initSacredTunnel();
     this._initExoplanet();
     this._initBioluminescence();
@@ -1333,6 +1618,11 @@ export class DreamscapeEngine {
     this._initMushroomGrove();
     this._initWillowVeil();
     this._initIcicleSanctuary();
+    this._initSpiralGalaxy();
+    this._initLuminousHearts();
+    this._initConstellations();
+    this._initSolarEclipse();
+    this._initMantaRay();
 
     this._onResize = this._handleResize.bind(this);
     window.addEventListener('resize', this._onResize);
@@ -1433,25 +1723,33 @@ export class DreamscapeEngine {
     return candidates[Math.floor(Math.random() * candidates.length)];
   }
 
-  _pickAtmosphereForScene(shader, world3d) {
-    // Hard realm matches first so ocean feels aquatic, forest feels alive, glacier feels snowy
+  _pickAtmosphereForScene(shader, world3d, isDreamSkew = false) {
+    // Harmonious realm pairings by default; on ~30% Dream Skew draws, allow poetic cross-realm atmosphere blends
     let pool = [];
-    if (shader === 4 || world3d === 2) {
-      pool = ['underwater'];
+    if (isDreamSkew) {
+      pool = ['stars', 'comets', 'lanterns', 'snow', 'embers', 'forest', 'underwater', 'rain'];
+    } else if (shader === 4 || world3d === 2 || world3d === 13) {
+      pool = ['underwater', 'underwater', 'lanterns'];
     } else if (world3d === 6 || world3d === 7 || shader === 8 || shader === 9) {
-      pool = ['forest', 'forest', 'rain', 'embers'];
+      pool = ['forest', 'forest', 'lanterns', 'rain', 'embers'];
     } else if (world3d === 8) {
-      pool = ['snow', 'snow', 'stars'];
+      pool = ['snow', 'snow', 'stars', 'comets'];
+    } else if (shader === 11) {
+      pool = ['embers', 'embers', 'lanterns', 'comets'];
+    } else if (shader === 12) {
+      pool = ['rain', 'rain', 'comets', 'stars', 'lanterns'];
     } else if (shader === 10) {
-      pool = ['rain', 'snow', 'forest', 'embers', 'stars'];
+      pool = ['rain', 'snow', 'lanterns', 'comets', 'stars'];
     } else if (shader === 5 || shader === 7) {
-      pool = ['snow', 'stars', 'embers'];
-    } else if (shader === 3 || world3d === 1 || world3d === 3) {
-      pool = ['stars', 'stars', 'embers'];
+      pool = ['snow', 'comets', 'stars', 'lanterns'];
+    } else if (shader === 3 || world3d === 1 || world3d === 3 || world3d === 9 || world3d === 11 || world3d === 12) {
+      pool = ['stars', 'comets', 'comets', 'embers'];
+    } else if (world3d === 10) {
+      pool = ['lanterns', 'stars', 'snow', 'comets', 'embers'];
     } else if (shader === 6) {
-      pool = ['embers', 'forest', 'stars'];
+      pool = ['embers', 'lanterns', 'forest', 'stars'];
     } else {
-      pool = ['stars', 'embers', 'forest', 'rain', 'snow'];
+      pool = ['stars', 'comets', 'lanterns', 'embers', 'forest', 'rain', 'snow'];
     }
 
     // Prefer an atmosphere that wasn't just active
@@ -1474,27 +1772,40 @@ export class DreamscapeEngine {
       ? shaderCandidates[Math.floor(Math.random() * shaderCandidates.length)]
       : Math.floor(Math.random() * SHADER_WORLDS.length);
 
-    const affinity = SHADER_AFFINITY[shader] || [0, 1, 2, 3, 4, 5, 6, 7, 8];
-    let worldCandidates = affinity.filter((w) => !this.recentWorlds3d.includes(w));
-    if (worldCandidates.length === 0) {
-      worldCandidates = affinity.filter((w) => !prevStep || w !== prevStep.world3d);
+    const affinity = SHADER_AFFINITY[shader] || [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+    // ~30% subtle cross-realm "Dream Skew" fusion: pair a centerpiece from another realm while preserving 1+1+1 calm density
+    const isDreamSkew = prevStep !== null && Math.random() < 0.30;
+    let worldPool = affinity;
+    if (isDreamSkew) {
+      const crossRealm = [];
+      for (let w = 0; w < THREE_WORLDS.length; w++) {
+        if (!affinity.includes(w) && !this.recentWorlds3d.includes(w)) {
+          crossRealm.push(w);
+        }
+      }
+      if (crossRealm.length > 0) worldPool = crossRealm;
     }
-    if (worldCandidates.length === 0) worldCandidates = affinity;
+
+    let worldCandidates = worldPool.filter((w) => !this.recentWorlds3d.includes(w));
+    if (worldCandidates.length === 0) {
+      worldCandidates = worldPool.filter((w) => !prevStep || w !== prevStep.world3d);
+    }
+    if (worldCandidates.length === 0) worldCandidates = worldPool;
     const world3d = worldCandidates[Math.floor(Math.random() * worldCandidates.length)];
 
     this.recentShaders.push(shader);
-    if (this.recentShaders.length > 3) this.recentShaders.shift();
+    if (this.recentShaders.length > 4) this.recentShaders.shift();
     this.recentWorlds3d.push(world3d);
-    if (this.recentWorlds3d.length > 2) this.recentWorlds3d.shift();
+    if (this.recentWorlds3d.length > 3) this.recentWorlds3d.shift();
 
-    const atmos = this._pickAtmosphereForScene(shader, world3d);
+    const atmos = this._pickAtmosphereForScene(shader, world3d, isDreamSkew);
 
-    const twist = (shader === 4 || shader === 5 || shader === 9 || shader === 10)
-      ? 0.05 + Math.random() * 0.07
+    const twist = (shader === 4 || shader === 5 || shader === 9 || shader === 10 || shader === 11 || shader === 12)
+      ? 0.04 + Math.random() * 0.07
       : 0.12 + Math.random() * 0.22;
     const kaleido = shader === 1
       ? 0.65 + Math.random() * 0.35
-      : (shader === 2 || shader === 7 ? Math.random() * 0.30 : (Math.random() < 0.18 ? 0.20 : 0.0));
+      : (shader === 2 || shader === 7 ? Math.random() * 0.30 : (Math.random() < 0.16 ? 0.18 : 0.0));
 
     const sideBias = -2.8 + Math.random() * 2.4;
     return { shader, world3d, atmos, twist, kaleido, sideBias };
@@ -2001,8 +2312,139 @@ export class DreamscapeEngine {
     this.scene.add(this.emberGroup);
   }
 
+  // ATMOS G: Floating Paper Sky Lanterns (26 warm translucent lanterns in a single InstancedMesh)
+  _initLanternFX() {
+    this.lanternGroup = new THREE.Group();
+    const count = 26;
+
+    // Tapered softly-bulged paper sky lantern shell
+    const geo = new THREE.CylinderGeometry(0.19, 0.125, 0.36, 12, 5, true);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      const yn = (y + 0.18) / 0.36; // 0..1 bottom to top
+      const bulge = 1.0 + Math.sin(yn * Math.PI) * 0.32;
+      pos.setXYZ(i, x * bulge, y, z * bulge);
+    }
+    geo.computeVertexNormals();
+
+    this.lanternMat = new THREE.ShaderMaterial({
+      vertexShader: LANTERN_VERTEX_SHADER,
+      fragmentShader: LANTERN_FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      uniforms: {
+        uTime: { value: 0 },
+        uColorWarm: { value: new THREE.Color('#ffbe6b') },
+        uColorRim: { value: new THREE.Color('#f97316') },
+        uOpacity: { value: 0 },
+      },
+    });
+
+    this.lanternMesh = new THREE.InstancedMesh(geo, this.lanternMat, count);
+    this.lanternMesh.frustumCulled = false;
+    this.lanternData = [];
+
+    for (let i = 0; i < count; i++) {
+      this.lanternData.push({
+        x: (Math.random() - 0.5) * 26 - 1.2,
+        y: (Math.random() - 0.5) * 20,
+        z: -3.5 - Math.random() * 14.5,
+        riseSpeed: 0.24 + Math.random() * 0.34,
+        swayAmp: 0.35 + Math.random() * 0.65,
+        swayFreq: 0.18 + Math.random() * 0.22,
+        scale: 0.62 + Math.random() * 0.72,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+
+    this.lanternGroup.add(this.lanternMesh);
+    this.lanternGroup.visible = false;
+    this.scene.add(this.lanternGroup);
+  }
+
+  // ATMOS H: Slow Shooting Stars & Comets (sparse serene comets gliding lazily across open sky)
+  _initCometFX() {
+    this.cometGroup = new THREE.Group();
+    const count = 14;
+
+    const tailPositions = new Float32Array(count * 2 * 3);
+    const tailColors = new Float32Array(count * 2 * 3);
+    const tailGeo = new THREE.BufferGeometry();
+    tailGeo.setAttribute('position', new THREE.BufferAttribute(tailPositions, 3));
+    tailGeo.setAttribute('color', new THREE.BufferAttribute(tailColors, 3));
+    this.cometTailPosAttr = tailGeo.attributes.position;
+    this.cometTailColAttr = tailGeo.attributes.color;
+
+    this.cometTailMat = new THREE.LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.cometTails = new THREE.LineSegments(tailGeo, this.cometTailMat);
+    this.cometTails.frustumCulled = false;
+    this.cometGroup.add(this.cometTails);
+
+    const headPositions = new Float32Array(count * 3);
+    const headGeo = new THREE.BufferGeometry();
+    headGeo.setAttribute('position', new THREE.BufferAttribute(headPositions, 3));
+    this.cometHeadPosAttr = headGeo.attributes.position;
+
+    this.cometHeadMat = new THREE.PointsMaterial({
+      map: this.glowTex,
+      color: 0xffffff,
+      size: 0.62,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.cometHeads = new THREE.Points(headGeo, this.cometHeadMat);
+    this.cometHeads.frustumCulled = false;
+    this.cometGroup.add(this.cometHeads);
+
+    this.cometData = [];
+    for (let i = 0; i < count; i++) {
+      this.cometData.push(this._makeCometSpec(i, true));
+    }
+
+    this.cometGroup.visible = false;
+    this.scene.add(this.cometGroup);
+  }
+
+  _makeCometSpec(idx, staggerInitial = false) {
+    const dirSign = Math.random() > 0.25 ? 1 : -1;
+    const startX = dirSign > 0 ? -16 - Math.random() * 8 : 14 + Math.random() * 8;
+    const startY = 2.5 + Math.random() * 9.5;
+    const startZ = -6.5 - Math.random() * 14;
+    const vx = dirSign * (3.2 + Math.random() * 2.4);
+    const vy = -(1.1 + Math.random() * 1.4);
+    const vz = (Math.random() - 0.5) * 0.6;
+    const duration = 3.8 + Math.random() * 2.6;
+    const rest = 4.0 + Math.random() * 9.5;
+    return {
+      startX,
+      startY,
+      startZ,
+      vx,
+      vy,
+      vz,
+      tailLen: 2.2 + Math.random() * 2.4,
+      duration,
+      rest,
+      age: staggerInitial ? -(Math.random() * (duration + rest) + idx * 0.45) : -rest,
+    };
+  }
+
   // ============================================================
-  // LAYER 2: 3D FOREGROUND WORLDS (0..8)
+  // LAYER 2: 3D FOREGROUND WORLDS (0..13)
   // ============================================================
 
   // 3D WORLD 0: Sacred Geometry Tunnel (7 varied gossamer polygon archetypes with shifting centers)
@@ -2770,6 +3212,494 @@ export class DreamscapeEngine {
     this.scene.add(this.icicleGroup);
   }
 
+  // 3D WORLD 9: Grand Tilted Spiral Galaxy (2-arm barred spiral cloud + luminous core + outer dust halo)
+  _initSpiralGalaxy() {
+    this.galaxyGroup = new THREE.Group();
+    this.galaxyPivot = new THREE.Group();
+    this.galaxyPivot.rotation.set(1.08, 0.16, -0.22);
+    this.galaxyGroup.add(this.galaxyPivot);
+
+    // 1. 2,000-star 2-arm logarithmic spiral particle cloud
+    const starCount = 2000;
+    const positions = new Float32Array(starCount * 3);
+    const colors = new Float32Array(starCount * 3);
+    const coreCol = new THREE.Color('#fff4d6');
+    const armColA = new THREE.Color('#7dd3fc');
+    const armColB = new THREE.Color('#c084fc');
+    const c = new THREE.Color();
+
+    for (let i = 0; i < starCount; i++) {
+      const arm = i % 2;
+      const rNorm = Math.pow(Math.random(), 1.35);
+      const r = 0.25 + rNorm * 6.4;
+      const spiralTwist = r * 0.92;
+      const armAngle = arm * Math.PI + spiralTwist;
+      const spread = (0.18 + rNorm * 0.92) * (Math.random() - 0.5) * 1.45;
+      const angle = armAngle + spread;
+      const diskThickness = (1.0 - rNorm * 0.72) * (Math.random() - 0.5) * 0.62;
+
+      positions[i * 3] = Math.cos(angle) * r;
+      positions[i * 3 + 1] = diskThickness;
+      positions[i * 3 + 2] = Math.sin(angle) * r;
+
+      c.copy(coreCol).lerp(arm === 0 ? armColA : armColB, Math.min(1, rNorm * 1.15));
+      const lum = 0.55 + Math.random() * 0.45;
+      colors[i * 3] = c.r * lum;
+      colors[i * 3 + 1] = c.g * lum;
+      colors[i * 3 + 2] = c.b * lum;
+    }
+
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    starGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    this.galaxyStarsMat = new THREE.PointsMaterial({
+      map: this.glowTex,
+      size: 0.24,
+      sizeAttenuation: true,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.galaxyStars = new THREE.Points(starGeo, this.galaxyStarsMat);
+    this.galaxyPivot.add(this.galaxyStars);
+
+    // 2. Translucent glowing oblate galactic core bulge
+    const coreGeo = new THREE.SphereGeometry(1.15, 28, 22);
+    coreGeo.scale(1.35, 0.48, 1.0);
+    this.galaxyCoreMat = new THREE.ShaderMaterial({
+      vertexShader: ICE_CRYSTAL_VERTEX_SHADER,
+      fragmentShader: `
+        precision highp float;
+        varying vec3 vNormal;
+        varying vec3 vViewPos;
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        uniform float uOpacity;
+        void main() {
+          vec3 n = normalize(vNormal);
+          vec3 v = normalize(vViewPos);
+          float facing = pow(max(abs(dot(n, v)), 0.0), 1.45);
+          vec3 col = mix(uColorB, uColorA, facing) * (0.7 + 0.8 * facing);
+          float alpha = clamp(facing * 0.78 * uOpacity, 0.0, 0.85);
+          gl_FragColor = vec4(col, alpha);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uColorA: { value: new THREE.Color('#fff7d6') },
+        uColorB: { value: new THREE.Color('#818cf8') },
+        uOpacity: { value: 0.0 },
+      },
+    });
+    this.galaxyCore = new THREE.Mesh(coreGeo, this.galaxyCoreMat);
+    this.galaxyPivot.add(this.galaxyCore);
+
+    // 3. Soft outer gossamer halo ring
+    const haloGeo = new THREE.TorusGeometry(4.4, 0.04, 10, 84);
+    haloGeo.rotateX(Math.PI / 2);
+    this.galaxyHaloMat = new THREE.MeshBasicMaterial({
+      color: 0xa5b4fc,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.galaxyHalo = new THREE.Mesh(haloGeo, this.galaxyHaloMat);
+    this.galaxyPivot.add(this.galaxyHalo);
+
+    this.galaxyGroup.visible = false;
+    this.scene.add(this.galaxyGroup);
+  }
+
+  // 3D WORLD 10: Luminous Sculpted Hearts (3 translucent ribbon-light & crystalline sculpted hearts with calm heartbeat)
+  _initLuminousHearts() {
+    this.heartsGroup = new THREE.Group();
+    this.sculptedHearts = [];
+
+    // Smooth parametric 3D sculptural heart curve (classic curve + gentle 3D z-undulation)
+    const outerPts = [];
+    const innerPts = [];
+    const steps = 64;
+    for (let i = 0; i < steps; i++) {
+      const a = (i / steps) * Math.PI * 2;
+      const hx = 16 * Math.pow(Math.sin(a), 3) * 0.095;
+      const hy = (13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a)) * 0.095;
+      const hz = Math.sin(a * 2) * 0.22;
+      outerPts.push(new THREE.Vector3(hx, hy, hz));
+      innerPts.push(new THREE.Vector3(hx * 0.68, hy * 0.68, -hz * 0.85));
+    }
+    const outerCurve = new THREE.CatmullRomCurve3(outerPts, true);
+    const innerCurve = new THREE.CatmullRomCurve3(innerPts, true);
+    const outerTubeGeo = new THREE.TubeGeometry(outerCurve, 96, 0.055, 10, true);
+    const innerTubeGeo = new THREE.TubeGeometry(innerCurve, 76, 0.032, 8, true);
+
+    // Beveled translucent crystalline inner heart core
+    const heartShape = new THREE.Shape();
+    for (let i = 0; i <= 48; i++) {
+      const a = (i / 48) * Math.PI * 2;
+      const sx = 16 * Math.pow(Math.sin(a), 3) * 0.052;
+      const sy = (13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a)) * 0.052;
+      if (i === 0) heartShape.moveTo(sx, sy);
+      else heartShape.lineTo(sx, sy);
+    }
+    const coreGeo = new THREE.ExtrudeGeometry(heartShape, {
+      depth: 0.16,
+      bevelEnabled: true,
+      bevelThickness: 0.14,
+      bevelSize: 0.10,
+      bevelSegments: 3,
+      curveSegments: 16,
+    });
+    coreGeo.center();
+
+    this.heartRibbonMat = new THREE.ShaderMaterial({
+      vertexShader: ICE_CRYSTAL_VERTEX_SHADER,
+      fragmentShader: ICE_CRYSTAL_FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uTime: { value: 0 },
+        uColorA: { value: new THREE.Color('#fb7185') },
+        uColorB: { value: new THREE.Color('#fbcfe8') },
+        uOpacity: { value: 0.0 },
+      },
+    });
+
+    this.heartCoreMat = new THREE.MeshPhysicalMaterial({
+      color: 0xfb7185,
+      emissive: 0xec4899,
+      emissiveIntensity: 0.42,
+      roughness: 0.14,
+      metalness: 0.1,
+      clearcoat: 1.0,
+      transparent: true,
+      opacity: 0.0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+
+    const configs = [
+      { basePos: new THREE.Vector3(-1.4, 0.35, -7.2), scale: 1.38, phase: 0.0, rotSpeed: 0.13 },
+      { basePos: new THREE.Vector3(-5.8, 2.25, -11.5), scale: 0.78, phase: 2.1, rotSpeed: -0.16 },
+      { basePos: new THREE.Vector3(2.8, -1.95, -13.0), scale: 0.66, phase: 4.3, rotSpeed: 0.11 },
+    ];
+
+    for (let i = 0; i < configs.length; i++) {
+      const cfg = configs[i];
+      const holder = new THREE.Group();
+      const outerMesh = new THREE.Mesh(outerTubeGeo, this.heartRibbonMat);
+      const innerMesh = new THREE.Mesh(innerTubeGeo, this.heartRibbonMat);
+      innerMesh.rotation.y = 0.28;
+      const coreMesh = new THREE.Mesh(coreGeo, this.heartCoreMat);
+      holder.add(outerMesh, innerMesh, coreMesh);
+      holder.position.copy(cfg.basePos);
+      holder.scale.setScalar(cfg.scale);
+      holder.userData = {
+        basePos: cfg.basePos,
+        baseScale: cfg.scale,
+        phase: cfg.phase,
+        rotSpeed: cfg.rotSpeed,
+        innerMesh,
+      };
+      this.heartsGroup.add(holder);
+      this.sculptedHearts.push(holder);
+    }
+
+    this.heartsGroup.visible = false;
+    this.scene.add(this.heartsGroup);
+  }
+
+  // 3D WORLD 11: Living Star-Map Constellations (5 mythic/geometric star patterns + gossamer astrolabe arcs)
+  _initConstellations() {
+    this.constellationGroup = new THREE.Group();
+
+    // 5 spacious celestial constellations placed across layered depths
+    const defs = [
+      {
+        // Cygnus / Celestial Swan (center-left hero)
+        offset: [-2.4, 0.9, -7.8],
+        stars: [
+          [0.0, 2.3, 0.0], [0.0, 0.6, 0.2], [0.0, -1.8, -0.1],
+          [-2.3, 0.4, 0.3], [-1.1, 0.55, 0.15], [1.2, 0.65, 0.1], [2.4, 0.25, -0.2],
+        ],
+        edges: [[0, 1], [1, 2], [3, 4], [4, 1], [1, 5], [5, 6]],
+      },
+      {
+        // Cassiopeia / Crown (upper-right)
+        offset: [2.6, 2.6, -11.4],
+        stars: [
+          [-2.1, 0.5, 0.0], [-1.0, -0.45, 0.2], [0.1, 0.35, -0.1], [1.1, -0.55, 0.15], [2.2, 0.45, -0.2],
+        ],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4]],
+      },
+      {
+        // Lyra / Harp (lower-left)
+        offset: [-5.8, -1.6, -10.2],
+        stars: [
+          [0.0, 1.5, 0.1], [-0.85, 0.45, 0.2], [0.75, 0.35, -0.1], [-0.55, -1.1, 0.15], [0.85, -1.2, -0.15],
+        ],
+        edges: [[0, 1], [0, 2], [1, 2], [1, 3], [2, 4], [3, 4]],
+      },
+      {
+        // Orion / Celestial Bow (mid-depth right-center)
+        offset: [1.4, -1.4, -13.6],
+        stars: [
+          [-1.3, 1.8, 0.0], [1.2, 1.6, -0.2], [-0.55, 0.05, 0.2], [0.0, 0.0, 0.25], [0.55, -0.05, 0.2],
+          [-1.1, -1.7, -0.1], [1.3, -1.6, 0.1],
+        ],
+        edges: [[0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6], [0, 1], [5, 6]],
+      },
+      {
+        // Draco / Astral Serpent (upper-left far)
+        offset: [-5.2, 3.1, -14.2],
+        stars: [
+          [-2.2, -0.6, 0.0], [-1.3, 0.35, 0.2], [-0.2, 0.85, -0.1], [0.95, 0.25, 0.2], [1.75, -0.45, 0.0], [2.45, 0.2, -0.2],
+        ],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]],
+      },
+    ];
+
+    const linePositions = [];
+    const lineProgress = [];
+    const lineSeeds = [];
+    const starPositions = [];
+    const starColors = [];
+    const c = new THREE.Color();
+
+    for (let d = 0; d < defs.length; d++) {
+      const def = defs[d];
+      const [ox, oy, oz] = def.offset;
+      for (let s = 0; s < def.stars.length; s++) {
+        const st = def.stars[s];
+        starPositions.push(ox + st[0], oy + st[1], oz + st[2]);
+        c.setHSL(0.55 + (d % 2) * 0.06 - 0.05 * (s % 2), 0.45, 0.88);
+        starColors.push(c.r, c.g, c.b);
+      }
+      for (let e = 0; e < def.edges.length; e++) {
+        const [aIdx, bIdx] = def.edges[e];
+        const pa = def.stars[aIdx];
+        const pb = def.stars[bIdx];
+        const seed = (d * 0.23 + e * 0.11) % 1.0;
+        linePositions.push(ox + pa[0], oy + pa[1], oz + pa[2], ox + pb[0], oy + pb[1], oz + pb[2]);
+        lineProgress.push(0.0, 1.0);
+        lineSeeds.push(seed, seed);
+      }
+    }
+
+    const lineGeo = new THREE.BufferGeometry();
+    lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+    lineGeo.setAttribute('aProgress', new THREE.Float32BufferAttribute(lineProgress, 1));
+    lineGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(lineSeeds, 1));
+
+    this.constellationLineMat = new THREE.ShaderMaterial({
+      vertexShader: CONSTELLATION_LINE_VERTEX_SHADER,
+      fragmentShader: CONSTELLATION_LINE_FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uTime: { value: 0 },
+        uColorA: { value: new THREE.Color('#fef08a') },
+        uColorB: { value: new THREE.Color('#7dd3fc') },
+        uOpacity: { value: 0.0 },
+      },
+    });
+    this.constellationLines = new THREE.LineSegments(lineGeo, this.constellationLineMat);
+    this.constellationGroup.add(this.constellationLines);
+
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+    starGeo.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
+
+    this.constellationStarsMat = new THREE.PointsMaterial({
+      map: this.glowTex,
+      size: 0.68,
+      sizeAttenuation: true,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.constellationStars = new THREE.Points(starGeo, this.constellationStarsMat);
+    this.constellationGroup.add(this.constellationStars);
+
+    // Subtle background celestial astrolabe arcs
+    this.astrolabeMat = new THREE.MeshBasicMaterial({
+      color: 0xbae6fd,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.astrolabeRingA = new THREE.Mesh(new THREE.TorusGeometry(6.8, 0.016, 8, 96), this.astrolabeMat);
+    this.astrolabeRingA.position.set(-1.6, 0.2, -13.5);
+    this.astrolabeRingB = new THREE.Mesh(new THREE.TorusGeometry(5.1, 0.014, 8, 84), this.astrolabeMat);
+    this.astrolabeRingB.position.set(-1.6, 0.2, -13.5);
+    this.astrolabeRingB.rotation.set(0.62, 0.45, 0.2);
+    this.constellationGroup.add(this.astrolabeRingA, this.astrolabeRingB);
+
+    this.constellationGroup.visible = false;
+    this.scene.add(this.constellationGroup);
+  }
+
+  // 3D WORLD 12: Solar Eclipse & Diamond Corona (dark velvety moon + sweeping plasma corona + orbiting diamond flare)
+  _initSolarEclipse() {
+    this.eclipseGroup = new THREE.Group();
+
+    // 1. Procedural solar corona streamer & diamond-ring disc
+    const coronaGeo = new THREE.PlaneGeometry(11.6, 11.6);
+    this.eclipseCoronaMat = new THREE.ShaderMaterial({
+      vertexShader: ECLIPSE_CORONA_VERTEX_SHADER,
+      fragmentShader: ECLIPSE_CORONA_FRAGMENT_SHADER,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      uniforms: {
+        uTime: { value: 0 },
+        uColorCore: { value: new THREE.Color('#fef3c7') },
+        uColorHalo: { value: new THREE.Color('#f59e0b') },
+        uOpacity: { value: 0.0 },
+      },
+    });
+    this.eclipseCorona = new THREE.Mesh(coronaGeo, this.eclipseCoronaMat);
+    this.eclipseGroup.add(this.eclipseCorona);
+
+    // 2. Dark velvety eclipsing lunar disc (deep twilight matte sphere so silhouette feels tactile)
+    const moonGeo = new THREE.SphereGeometry(1.75, 40, 32);
+    this.eclipseMoonMat = new THREE.MeshStandardMaterial({
+      color: 0x05070e,
+      emissive: 0x070a14,
+      emissiveIntensity: 0.35,
+      roughness: 0.92,
+      metalness: 0.08,
+      transparent: true,
+      opacity: 0.0,
+      depthWrite: false,
+    });
+    this.eclipseMoon = new THREE.Mesh(moonGeo, this.eclipseMoonMat);
+    this.eclipseMoon.position.z = 0.06;
+    this.eclipseGroup.add(this.eclipseMoon);
+
+    // 3. Delicate prominence limb ring
+    const rimGeo = new THREE.TorusGeometry(1.77, 0.024, 10, 80);
+    this.eclipseRimMat = new THREE.MeshBasicMaterial({
+      color: 0xfde68a,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.eclipseRim = new THREE.Mesh(rimGeo, this.eclipseRimMat);
+    this.eclipseRim.position.z = 0.08;
+    this.eclipseGroup.add(this.eclipseRim);
+
+    this.eclipseGroup.visible = false;
+    this.scene.add(this.eclipseGroup);
+  }
+
+  // 3D WORLD 13: Gliding Bioluminescent Manta Ray (1 hero + 1 distant companion sculpting diamond wings & whip tail)
+  _initMantaRay() {
+    this.mantaGroup = new THREE.Group();
+    this.mantas = [];
+
+    // Sculpt a subdivided PlaneGeometry into a graceful diamond-wing manta ray with cephalic fins & whip tail
+    const geo = new THREE.PlaneGeometry(5.6, 4.4, 34, 24);
+    geo.rotateX(-Math.PI / 2); // Lie flat in XZ plane (+z nose, -z tail, +-x wings)
+    const pos = geo.attributes.position;
+
+    for (let i = 0; i < pos.count; i++) {
+      const u = pos.getX(i) / 2.8; // -1..1 across wingspan
+      const v = pos.getZ(i) / 2.2; // -1 (tail tip) .. +1 (cephalic nose)
+      const au = Math.abs(u);
+
+      // Compute graceful tapered wingspan silhouette along body length v
+      let spanProfile = 0.0;
+      if (v > 0.45) {
+        // Forward head & twin cephalic horn fins
+        const headT = (v - 0.45) / 0.55;
+        const horn = Math.exp(-Math.pow((au - 0.24) * 5.2, 2)) * 0.22 * (1.0 - headT * 0.3);
+        spanProfile = Math.max(0.06, (1.0 - headT * 0.72) * 0.38 + horn);
+      } else if (v > -0.32) {
+        // Swept diamond pectoral wings peaking near v = 0.08
+        const wingT = (v + 0.32) / 0.77; // 0..1 back-to-front of wings
+        spanProfile = 0.14 + Math.pow(Math.sin(wingT * Math.PI), 0.72) * 0.88;
+      } else {
+        // Slender tapering body transitioning into delicate whip tail
+        const tailT = Math.max(0, (v + 1.0) / 0.68); // 0 at tip .. 1 at wing root
+        spanProfile = 0.014 + Math.pow(tailT, 2.35) * 0.16;
+      }
+
+      const nx = u * 2.85 * spanProfile;
+      // Sweep outer wingtips gracefully backward
+      const sweepZ = -Math.pow(au, 1.55) * 0.55 * (v > -0.35 ? 1.0 : 0.0);
+      const nz = v * 2.45 + sweepZ;
+      // Subtle organic dorsal arch across central body spine
+      const bodyArch = Math.exp(-au * au * 4.5) * Math.max(0, 1.0 - Math.abs(v - 0.08) * 1.6) * 0.22;
+      pos.setXYZ(i, nx, bodyArch, nz);
+    }
+    geo.computeVertexNormals();
+
+    // Subtle dorsal bioluminescent spine filament curve
+    const spinePts = [
+      new THREE.Vector3(0, 0.24, 1.15),
+      new THREE.Vector3(0, 0.27, 0.25),
+      new THREE.Vector3(0, 0.14, -0.85),
+      new THREE.Vector3(0, 0.02, -2.35),
+    ];
+    const spineGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(spinePts), 32, 0.026, 6, false);
+
+    const configs = [
+      { scale: 1.05, phase: 0.0, offset: new THREE.Vector3(-1.4, 0.3, -8.0), radiusX: 3.6, radiusY: 1.45, radiusZ: 3.2, speed: 0.14 },
+      { scale: 0.56, phase: 2.8, offset: new THREE.Vector3(-4.2, 2.1, -13.5), radiusX: 4.4, radiusY: 1.15, radiusZ: 2.6, speed: 0.11 },
+    ];
+
+    for (let i = 0; i < configs.length; i++) {
+      const cfg = configs[i];
+      const mat = new THREE.ShaderMaterial({
+        vertexShader: MANTA_VERTEX_SHADER,
+        fragmentShader: MANTA_FRAGMENT_SHADER,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        uniforms: {
+          uTime: { value: 0 },
+          uPhase: { value: cfg.phase },
+          uColorBody: { value: new THREE.Color('#0284c7') },
+          uColorGlow: { value: new THREE.Color('#38bdf8') },
+          uOpacity: { value: 0.0 },
+        },
+      });
+      const spineMat = new THREE.MeshBasicMaterial({
+        color: 0x7dd3fc,
+        transparent: true,
+        opacity: 0.0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+
+      const holder = new THREE.Group();
+      const bodyMesh = new THREE.Mesh(geo, mat);
+      const spineMesh = new THREE.Mesh(spineGeo, spineMat);
+      holder.add(bodyMesh, spineMesh);
+      holder.scale.setScalar(cfg.scale);
+      holder.userData = { cfg, mat, spineMat };
+      this.mantaGroup.add(holder);
+      this.mantas.push(holder);
+    }
+
+    this.mantaGroup.visible = false;
+    this.scene.add(this.mantaGroup);
+  }
+
   _emitTitle(force = false) {
     if (!this.onTitleChange) return;
     const pal = PALETTES[this.paletteIdxA];
@@ -2914,7 +3844,7 @@ export class DreamscapeEngine {
     this.rimLight.color.copy(this._curRim);
     this.hemiLight.color.copy(this._curRim);
 
-    // Compute smoothly damped weights across all 6 Atmospheric FX layers
+    // Compute smoothly damped weights across all 8 Atmospheric FX layers
     for (let i = 0; i < ATMOS_TYPES.length; i++) {
       const key = ATMOS_TYPES[i];
       let target = 0;
@@ -2929,6 +3859,8 @@ export class DreamscapeEngine {
     const wSnow = this.atmosWeights.snow;
     const wRain = this.atmosWeights.rain;
     const wEmbers = this.atmosWeights.embers;
+    const wLanterns = this.atmosWeights.lanterns;
+    const wComets = this.atmosWeights.comets;
 
     // 2. Update Layer 1 GLSL Backdrop Uniforms
     const u = this.backdropMat.uniforms;
@@ -3199,7 +4131,107 @@ export class DreamscapeEngine {
       }
     }
 
-    // 5. Compute smooth 3D Layer weights (0..8; world 5 = Open Vista)
+    // 4G. ATMOS: Floating Paper Sky Lanterns
+    this.lanternGroup.visible = wLanterns > 0.015;
+    if (this.lanternGroup.visible) {
+      this.lanternMat.uniforms.uTime.value = t;
+      this.lanternMat.uniforms.uOpacity.value = wLanterns * 0.78;
+      this.lanternMat.uniforms.uColorWarm.value.copy(this._lanternWarm).lerp(this._curKey, 0.25);
+      this.lanternMat.uniforms.uColorRim.value.copy(this._warmEmberB).lerp(this._curAccent, 0.35);
+
+      for (let i = 0; i < this.lanternData.length; i++) {
+        const ln = this.lanternData[i];
+        ln.y += safeDt * ln.riseSpeed;
+        if (ln.y > 11.2) {
+          ln.y = -11.2 - Math.random() * 1.5;
+          ln.x = (Math.random() - 0.5) * 26 - 1.2;
+        }
+        const driftX = Math.sin(t * ln.swayFreq + ln.phase) * ln.swayAmp;
+        const driftZ = Math.cos(t * ln.swayFreq * 0.8 + ln.phase) * ln.swayAmp * 0.55;
+        this._dummy.position.set(ln.x + driftX, ln.y, ln.z + driftZ);
+        this._dummy.rotation.set(
+          Math.sin(t * 0.45 + ln.phase) * 0.08,
+          t * 0.16 + ln.phase,
+          Math.cos(t * 0.4 + ln.phase) * 0.07
+        );
+        this._dummy.scale.setScalar(ln.scale);
+        this._dummy.updateMatrix();
+        this.lanternMesh.setMatrixAt(i, this._dummy.matrix);
+      }
+      this.lanternMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    // 4H. ATMOS: Slow Shooting Stars & Comets
+    this.cometGroup.visible = wComets > 0.015;
+    if (this.cometGroup.visible) {
+      this.cometTailMat.opacity = wComets * 0.72;
+      this.cometHeadMat.opacity = wComets * 0.88;
+      this.cometHeadMat.color.copy(this._whiteColor).lerp(this._curKey, 0.3);
+
+      const tPos = this.cometTailPosAttr.array;
+      const tCol = this.cometTailColAttr.array;
+      const hPos = this.cometHeadPosAttr.array;
+      const cHeadR = 0.92 + 0.08 * this._curKey.r;
+      const cHeadG = 0.94 + 0.06 * this._curKey.g;
+      const cHeadB = 0.98;
+      const cTailR = this._curRim.r * 0.25;
+      const cTailG = this._curRim.g * 0.25;
+      const cTailB = this._curRim.b * 0.35;
+
+      for (let i = 0; i < this.cometData.length; i++) {
+        const cm = this.cometData[i];
+        cm.age += safeDt;
+        if (cm.age > cm.duration) {
+          this.cometData[i] = this._makeCometSpec(i, false);
+        }
+        const active = this.cometData[i];
+        const i6 = i * 6;
+        const i3 = i * 3;
+
+        if (active.age < 0) {
+          // Dormant comet parked off-camera so sky remains peaceful and sparse
+          tPos[i6] = tPos[i6 + 3] = 0;
+          tPos[i6 + 1] = tPos[i6 + 4] = 9999;
+          tPos[i6 + 2] = tPos[i6 + 5] = -50;
+          hPos[i3] = 0;
+          hPos[i3 + 1] = 9999;
+          hPos[i3 + 2] = -50;
+        } else {
+          const p = active.age / active.duration;
+          const fade = Math.sin(p * Math.PI);
+          const hx = active.startX + active.vx * active.age;
+          const hy = active.startY + active.vy * active.age - 0.16 * active.age * active.age;
+          const hz = active.startZ + active.vz * active.age;
+          const speedLen = Math.hypot(active.vx, active.vy, active.vz) || 1;
+          const tx = hx - (active.vx / speedLen) * active.tailLen * fade;
+          const ty = hy - (active.vy / speedLen) * active.tailLen * fade;
+          const tz = hz - (active.vz / speedLen) * active.tailLen * fade;
+
+          tPos[i6] = hx;
+          tPos[i6 + 1] = hy;
+          tPos[i6 + 2] = hz;
+          tPos[i6 + 3] = tx;
+          tPos[i6 + 4] = ty;
+          tPos[i6 + 5] = tz;
+
+          tCol[i6] = cHeadR * fade;
+          tCol[i6 + 1] = cHeadG * fade;
+          tCol[i6 + 2] = cHeadB * fade;
+          tCol[i6 + 3] = cTailR * fade * 0.08;
+          tCol[i6 + 4] = cTailG * fade * 0.08;
+          tCol[i6 + 5] = cTailB * fade * 0.08;
+
+          hPos[i3] = hx;
+          hPos[i3 + 1] = hy;
+          hPos[i3 + 2] = hz;
+        }
+      }
+      this.cometTailPosAttr.needsUpdate = true;
+      this.cometTailColAttr.needsUpdate = true;
+      this.cometHeadPosAttr.needsUpdate = true;
+    }
+
+    // 5. Compute smooth 3D Layer weights (0..13; world 5 = Open Vista)
     for (let i = 0; i < THREE_WORLDS.length; i++) {
       let target = 0;
       if (this.stepA.world3d === i) target += 1.0 - smoothMorph;
@@ -3516,6 +4548,140 @@ export class DreamscapeEngine {
         );
         pr.rotation.x += safeDt * ud.spinX;
         pr.rotation.y += safeDt * ud.spinY;
+      }
+    }
+
+    // World 9: Grand Tilted Spiral Galaxy
+    const wGalaxy = this.worldWeights[9];
+    this.galaxyGroup.visible = wGalaxy > 0.008;
+    if (this.galaxyGroup.visible) {
+      const depthSweep = Math.sin(t * 0.048) * 3.4;
+      this.galaxyGroup.position.set(
+        sideBias * 0.72 + Math.sin(t * 0.065) * 1.1,
+        Math.cos(t * 0.055) * 0.75,
+        -10.2 + depthSweep
+      );
+      this.galaxyPivot.rotation.x = 1.04 + Math.sin(t * 0.045) * 0.16;
+      this.galaxyPivot.rotation.z = -0.22 + Math.cos(t * 0.038) * 0.14;
+      this.galaxyStars.rotation.y = t * 0.055;
+      this.galaxyHalo.rotation.z = -t * 0.03;
+
+      this.galaxyStarsMat.opacity = wGalaxy * 0.82;
+      this.galaxyCoreMat.uniforms.uOpacity.value = wGalaxy * 0.72;
+      this.galaxyCoreMat.uniforms.uColorA.value.copy(this._eclipseGold).lerp(this._curKey, 0.4);
+      this.galaxyCoreMat.uniforms.uColorB.value.copy(this._curAccent).lerp(this._curRim, 0.4);
+      this.galaxyHaloMat.opacity = wGalaxy * 0.14;
+      this.galaxyHaloMat.color.copy(this._curRim);
+    }
+
+    // World 10: Luminous Sculpted Hearts (calm meditative heartbeat pulse)
+    const wHearts = this.worldWeights[10];
+    this.heartsGroup.visible = wHearts > 0.008;
+    if (this.heartsGroup.visible) {
+      this.heartRibbonMat.uniforms.uTime.value = t;
+      this.heartRibbonMat.uniforms.uOpacity.value = wHearts * 0.72;
+      this.heartRibbonMat.uniforms.uColorA.value.copy(this._heartRose).lerp(this._curKey, 0.48);
+      this.heartRibbonMat.uniforms.uColorB.value.copy(this._whiteColor).lerp(this._curRim, 0.55);
+
+      this.heartCoreMat.opacity = wHearts * 0.28;
+      this.heartCoreMat.color.copy(this._heartRose).lerp(this._curAccent, 0.45);
+      this.heartCoreMat.emissive.copy(this._curKey).lerp(this._heartRose, 0.45);
+
+      for (let i = 0; i < this.sculptedHearts.length; i++) {
+        const h = this.sculptedHearts[i];
+        const ud = h.userData;
+        // Soft double-peak organic heartbeat over a calm ~3.8s cycle
+        const beatPhase = (t * 0.26 + ud.phase * 0.15) % 1.0;
+        const beat1 = Math.exp(-Math.pow((beatPhase - 0.14) * 14.0, 2));
+        const beat2 = Math.exp(-Math.pow((beatPhase - 0.28) * 16.0, 2)) * 0.65;
+        const pulseScale = ud.baseScale * (1.0 + (beat1 + beat2) * 0.085);
+
+        h.position.set(
+          ud.basePos.x + sideBias * (i === 0 ? 0.55 : 0.25) + Math.sin(t * 0.11 + ud.phase) * 0.9,
+          ud.basePos.y + Math.cos(t * 0.14 + ud.phase) * 0.65,
+          ud.basePos.z + Math.sin(t * 0.055 + ud.phase) * 2.8
+        );
+        h.scale.setScalar(pulseScale);
+        h.rotation.y = Math.sin(t * ud.rotSpeed + ud.phase) * 0.55;
+        h.rotation.z = Math.cos(t * 0.09 + ud.phase) * 0.14;
+        ud.innerMesh.rotation.y = 0.28 + Math.sin(t * 0.22 + ud.phase) * 0.24;
+      }
+    }
+
+    // World 11: Living Star-Map Constellations
+    const wConst = this.worldWeights[11];
+    this.constellationGroup.visible = wConst > 0.008;
+    if (this.constellationGroup.visible) {
+      this.constellationLineMat.uniforms.uTime.value = t;
+      this.constellationLineMat.uniforms.uOpacity.value = wConst * 0.52;
+      this.constellationLineMat.uniforms.uColorA.value.copy(this._eclipseGold).lerp(this._curKey, 0.45);
+      this.constellationLineMat.uniforms.uColorB.value.copy(this._curRim).lerp(this._iceTint, 0.45);
+
+      this.constellationStarsMat.opacity = wConst * 0.88;
+      this.astrolabeMat.opacity = wConst * 0.11;
+      this.astrolabeMat.color.copy(this._curRim);
+
+      this.constellationGroup.position.set(
+        sideBias * 0.35 + Math.sin(t * 0.04) * 0.65,
+        Math.cos(t * 0.035) * 0.45,
+        Math.sin(t * 0.032) * 1.8
+      );
+      this.constellationGroup.rotation.y = Math.sin(t * 0.035) * 0.10;
+      this.astrolabeRingA.rotation.z = t * 0.025;
+      this.astrolabeRingB.rotation.x = 0.62 + t * 0.022;
+      this.astrolabeRingB.rotation.y = 0.45 - t * 0.018;
+    }
+
+    // World 12: Solar Eclipse & Diamond Corona
+    const wEclipse = this.worldWeights[12];
+    this.eclipseGroup.visible = wEclipse > 0.008;
+    if (this.eclipseGroup.visible) {
+      const depthSweep = Math.sin(t * 0.045) * 2.4;
+      this.eclipseGroup.position.set(
+        sideBias * 0.78 + Math.sin(t * 0.055) * 1.15,
+        0.35 + Math.cos(t * 0.048) * 0.65,
+        -9.6 + depthSweep
+      );
+      this.eclipseCoronaMat.uniforms.uTime.value = t;
+      this.eclipseCoronaMat.uniforms.uOpacity.value = wEclipse * 0.86;
+      this.eclipseCoronaMat.uniforms.uColorCore.value.copy(this._eclipseGold).lerp(this._curKey, 0.38);
+      this.eclipseCoronaMat.uniforms.uColorHalo.value.copy(this._warmEmberA).lerp(this._curAccent, 0.52);
+
+      this.eclipseMoonMat.opacity = wEclipse * 0.94;
+      this.eclipseRimMat.opacity = wEclipse * 0.48;
+      this.eclipseRimMat.color.copy(this._eclipseGold).lerp(this._curKey, 0.35);
+      this.eclipseRim.scale.setScalar(1.0 + Math.sin(t * 0.5) * 0.008);
+    }
+
+    // World 13: Gliding Bioluminescent Manta Ray
+    const wManta = this.worldWeights[13];
+    this.mantaGroup.visible = wManta > 0.008;
+    if (this.mantaGroup.visible) {
+      for (let i = 0; i < this.mantas.length; i++) {
+        const m = this.mantas[i];
+        const { cfg, mat, spineMat } = m.userData;
+        const a = t * cfg.speed + cfg.phase;
+        // Wide graceful figure-eight underwater/astral gliding arc
+        const px = cfg.offset.x + sideBias * (i === 0 ? 0.55 : 0.25) + Math.sin(a) * cfg.radiusX;
+        const py = cfg.offset.y + Math.sin(a * 1.5) * cfg.radiusY;
+        const pz = cfg.offset.z + Math.cos(a * 0.85) * cfg.radiusZ;
+
+        // Tangent heading along glide path so the manta always banks naturally into turns
+        const dx = Math.cos(a) * cfg.radiusX * cfg.speed;
+        const dy = Math.cos(a * 1.5) * cfg.radiusY * cfg.speed * 1.5;
+        const dz = -Math.sin(a * 0.85) * cfg.radiusZ * cfg.speed * 0.85;
+
+        m.position.set(px, py, pz);
+        m.rotation.y = Math.atan2(dx, dz);
+        m.rotation.x = -Math.atan2(dy, Math.hypot(dx, dz) + 0.001) * 0.65;
+        m.rotation.z = -dx * 0.42;
+
+        mat.uniforms.uTime.value = t;
+        mat.uniforms.uOpacity.value = wManta * (i === 0 ? 0.78 : 0.46);
+        mat.uniforms.uColorBody.value.copy(this._curAccent).lerp(this._mantaGlow, 0.38);
+        mat.uniforms.uColorGlow.value.copy(this._mantaGlow).lerp(this._curRim, 0.45);
+        spineMat.opacity = wManta * (i === 0 ? 0.34 : 0.18);
+        spineMat.color.copy(this._curRim).lerp(this._mantaGlow, 0.45);
       }
     }
   }

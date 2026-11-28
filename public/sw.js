@@ -6,7 +6,7 @@
  * redirects, and PWA standalone launches on Smart TVs, tablets, and phones never loop.
  */
 
-const BUILD_VERSION = 'v1.11272026.2045';
+const BUILD_VERSION = 'v1.11282026.0510';
 const SHELL_CACHE = `gimme-tv-shell-${BUILD_VERSION}`;
 
 const SHELL_ASSETS = [
