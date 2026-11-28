@@ -251,10 +251,21 @@ async function createApp() {
       const htmlPath = path.join(__dirname, 'index.html');
       let html = fs.readFileSync(htmlPath, 'utf-8');
       html = html.replace(/href="\.?\/style\.css"/, `href="./style.css?v=${ver}"`);
-      html = html.replace(
-        /<script type="module" src="\.?\/src\/main\.js"><\/script>/,
-        `${DEV_IMPORT_MAP}<script type="module" src="./src/main.js?v=${ver}"></script>`
-      );
+      if (/<script type="importmap" id="three-importmap">[\s\S]*?<\/script>/.test(html)) {
+        html = html.replace(
+          /<script type="importmap" id="three-importmap">[\s\S]*?<\/script>/,
+          DEV_IMPORT_MAP.trim()
+        );
+        html = html.replace(
+          /<script type="module" src="\.?\/src\/main\.js"><\/script>/,
+          `<script type="module" src="./src/main.js?v=${ver}"></script>`
+        );
+      } else {
+        html = html.replace(
+          /<script type="module" src="\.?\/src\/main\.js"><\/script>/,
+          `${DEV_IMPORT_MAP}<script type="module" src="./src/main.js?v=${ver}"></script>`
+        );
+      }
       res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' });
       if (req.method === 'HEAD') {
         res.end();
