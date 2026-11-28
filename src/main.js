@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11272026.2024';
+export const APP_BUILD_VERSION = 'v1.11272026.2036';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -706,13 +706,13 @@ async function fetchSmithsonianArtworks() {
     const units = ['HMSG', 'SAAM', 'NASM', 'CHNDM', 'FSG', 'NPG'];
     const unit = units[Math.floor(Math.random() * units.length)];
     const start = pickUniqueRandomPage('smithsonian', 0, 3200);
-    const url = `/api/smithsonian?unit=${unit}&start=${start}&rows=18`;
+    const url = `./api/smithsonian?unit=${unit}&start=${start}&rows=18`;
     const res = await fetchWithTimeout(url, { cache: 'no-store' }, 7000);
-    if (!res.ok) throw new Error(`Smithsonian proxy status: ${res.status}`);
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || !contentType.includes('application/json')) return [];
     const json = await res.json();
     return Array.isArray(json.items) ? json.items : [];
-  } catch (e) {
-    console.warn('[Art] Smithsonian fetch failed:', e);
+  } catch (_e) {
     return [];
   }
 }
@@ -1891,8 +1891,8 @@ async function checkPhoneHomeUpdate(isManual = false) {
       swRegistration.update().catch(() => {});
     }
 
-    // Fetch live /version.json bypassing all caches
-    const verRes = await fetch(`/version.json?t=${Date.now()}`, {
+    // Fetch live ./version.json bypassing all caches (relative path works at root or subpaths)
+    const verRes = await fetch(`./version.json?t=${Date.now()}`, {
       cache: 'no-store',
       credentials: 'same-origin',
     });
@@ -1966,8 +1966,8 @@ async function checkPhoneHomeUpdate(isManual = false) {
 async function registerPWA() {
   if ('serviceWorker' in navigator) {
     try {
-      swRegistration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/',
+      swRegistration = await navigator.serviceWorker.register('./sw.js', {
+        scope: './',
         updateViaCache: 'none',
       });
       console.log('[PWA] Service Worker registered with scope:', swRegistration.scope);

@@ -6,15 +6,15 @@
  * redirects, and PWA standalone launches on Smart TVs, tablets, and phones never loop.
  */
 
-const BUILD_VERSION = 'v1.11272026.2024';
+const BUILD_VERSION = 'v1.11272026.2036';
 const SHELL_CACHE = `gimme-tv-shell-${BUILD_VERSION}`;
 
 const SHELL_ASSETS = [
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon.svg',
-  '/apple-touch-icon.png',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon.svg',
+  './apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -73,25 +73,32 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Compute path relative to SW registration scope (works at "/" or "/gimme-tv/")
+  const scopePath = new URL(self.registration.scope).pathname.replace(/\/$/, '');
+  const relPath =
+    scopePath && url.pathname.startsWith(scopePath)
+      ? url.pathname.slice(scopePath.length) || '/'
+      : url.pathname;
+
   // 3. Never intercept or cache version beacon, SW script, API proxy, dev source files, or manifest
   if (
-    url.pathname === '/version.json' ||
-    url.pathname === '/sw.js' ||
-    url.pathname === '/manifest.json' ||
-    url.pathname === '/style.css' ||
-    url.pathname.startsWith('/src/') ||
-    url.pathname.startsWith('/vendor/') ||
-    url.pathname.startsWith('/api/') ||
-    url.pathname.startsWith('/@')
+    relPath === '/version.json' ||
+    relPath === '/sw.js' ||
+    relPath === '/manifest.json' ||
+    relPath === '/style.css' ||
+    relPath.startsWith('/src/') ||
+    relPath.startsWith('/vendor/') ||
+    relPath.startsWith('/api/') ||
+    relPath.startsWith('/@')
   ) {
     return;
   }
 
   // 4. Static hashed production bundles (/assets/*) and launcher icons (/icons/*, /apple-touch-icon.png)
   if (
-    url.pathname.startsWith('/assets/') ||
-    url.pathname.startsWith('/icons/') ||
-    url.pathname === '/apple-touch-icon.png'
+    relPath.startsWith('/assets/') ||
+    relPath.startsWith('/icons/') ||
+    relPath === '/apple-touch-icon.png'
   ) {
     event.respondWith(
       fetch(event.request)
