@@ -34,9 +34,22 @@ function cleanSmithsonianCreator(raw) {
 }
 
 function setNoStoreHeaders(res) {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('CDN-Cache-Control', 'no-store');
+  res.setHeader('Surrogate-Control', 'no-store');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
+}
+
+function getLiveBuildVersion() {
+  try {
+    const raw = fs.readFileSync(path.join(__dirname, 'public', 'version.json'), 'utf-8');
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.version === 'string' && parsed.version.trim()) {
+      return parsed.version.trim();
+    }
+  } catch (_err) {}
+  return String(Date.now());
 }
 
 function isHtmlNavigationRequest(req) {
@@ -146,6 +159,8 @@ async function createApp() {
     app.use(
       express.static(DIST_DIR, {
         index: false,
+        etag: false,
+        lastModified: false,
         setHeaders(res, filePath) {
           if (
             filePath.endsWith('index.html') ||
@@ -163,13 +178,13 @@ async function createApp() {
 
     app.get('/local_art_manifest.json', (_req, res) => {
       setNoStoreHeaders(res);
-      res.sendFile(path.join(__dirname, 'local_art_manifest.json'));
+      res.sendFile(path.join(__dirname, 'local_art_manifest.json'), { etag: false, lastModified: false });
     });
 
     app.use((req, res, next) => {
       if (!isHtmlNavigationRequest(req)) return next();
       setNoStoreHeaders(res);
-      res.sendFile(path.join(DIST_DIR, 'index.html'));
+      res.sendFile(path.join(DIST_DIR, 'index.html'), { etag: false, lastModified: false });
     });
   } else {
     // Pure Express dev serving — zero Vite HMR client injection, zero WebSocket reconnect loops, zero JS-wrapped CSS
@@ -184,6 +199,8 @@ async function createApp() {
     app.use(
       express.static(PUBLIC_DIR, {
         index: false,
+        etag: false,
+        lastModified: false,
         setHeaders(res, filePath) {
           if (
             filePath.endsWith('sw.js') ||
@@ -196,9 +213,20 @@ async function createApp() {
       })
     );
 
+    // Stamp current build version onto lazy dreamscape import so tablets/TVs never reuse a cached ES module
+    app.get('/src/main.js', (_req, res) => {
+      setNoStoreHeaders(res);
+      const ver = encodeURIComponent(getLiveBuildVersion());
+      let code = fs.readFileSync(path.join(SRC_DIR, 'main.js'), 'utf-8');
+      code = code.replace("import('./dreamscape.js')", `import('./dreamscape.js?v=${ver}')`);
+      res.status(200).type('text/javascript; charset=utf-8').send(code);
+    });
+
     app.use(
       '/src',
       express.static(SRC_DIR, {
+        etag: false,
+        lastModified: false,
         setHeaders(res) {
           setNoStoreHeaders(res);
         },
@@ -208,22 +236,24 @@ async function createApp() {
     app.get('/style.css', (_req, res) => {
       setNoStoreHeaders(res);
       res.type('text/css; charset=utf-8');
-      res.sendFile(path.join(__dirname, 'style.css'));
+      res.sendFile(path.join(__dirname, 'style.css'), { etag: false, lastModified: false });
     });
 
     app.get('/local_art_manifest.json', (_req, res) => {
       setNoStoreHeaders(res);
-      res.sendFile(path.join(__dirname, 'local_art_manifest.json'));
+      res.sendFile(path.join(__dirname, 'local_art_manifest.json'), { etag: false, lastModified: false });
     });
 
     app.use((req, res, next) => {
       if (!isHtmlNavigationRequest(req)) return next();
       setNoStoreHeaders(res);
+      const ver = encodeURIComponent(getLiveBuildVersion());
       const htmlPath = path.join(__dirname, 'index.html');
       let html = fs.readFileSync(htmlPath, 'utf-8');
+      html = html.replace('href="/style.css"', `href="/style.css?v=${ver}"`);
       html = html.replace(
         '<script type="module" src="/src/main.js"></script>',
-        `${DEV_IMPORT_MAP}<script type="module" src="/src/main.js"></script>`
+        `${DEV_IMPORT_MAP}<script type="module" src="/src/main.js?v=${ver}"></script>`
       );
       res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' });
       if (req.method === 'HEAD') {

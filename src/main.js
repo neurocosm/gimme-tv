@@ -84,7 +84,7 @@ function updateClock() {
  * Current Application Build Version (Updated with every release & feature update)
  * Format: v1.MMDDYYYY.HHmm
  */
-export const APP_BUILD_VERSION = 'v1.11262026.1638';
+export const APP_BUILD_VERSION = 'v1.11272026.2024';
 
 function formatBuildStamp() {
   return APP_BUILD_VERSION;
@@ -1742,11 +1742,17 @@ const VERSION_STAMP_REGEX = /^v\d+\.\d{8}\.\d{4}$/;
 const UPDATE_RELOAD_GUARD_KEY = 'gimme_tv_update_reload_guard';
 const UPDATE_RELOAD_COOLDOWN_MS = 60 * 1000;
 
-// Clean any legacy _u query param left over from an earlier build
+// Clean any cache-buster query params after a fresh update navigation
 try {
   const currentUrl = new URL(window.location.href);
-  if (currentUrl.searchParams.has('_u')) {
-    currentUrl.searchParams.delete('_u');
+  let urlDirty = false;
+  for (const param of ['_u', '_cb', 'v']) {
+    if (currentUrl.searchParams.has(param)) {
+      currentUrl.searchParams.delete(param);
+      urlDirty = true;
+    }
+  }
+  if (urlDirty) {
     window.history.replaceState({}, '', currentUrl.pathname + currentUrl.search + currentUrl.hash);
   }
 } catch (_e) {}
@@ -1805,12 +1811,15 @@ function clearUpdateAvailableUI() {
 }
 
 /**
- * Apply pending update ONLY when the user explicitly taps "UPDATE AVAILABLE".
- * Purges stale caches, activates any waiting worker, and performs ONE clean reload.
+ * Apply pending update (or forced hard refresh) ONLY when explicitly tapped by user.
+ * Purges ALL caches, unregisters all Service Workers (so old SWs cannot intercept the reload),
+ * and navigates to a cache-busted URL so tablets and Smart TVs always fetch the newest build.
  */
-async function applyPendingUpdate() {
-  const targetVersion = updateAvailableVersion;
-  writeReloadGuard(targetVersion);
+async function applyPendingUpdate(forceHard = false) {
+  const targetVersion = updateAvailableVersion || APP_BUILD_VERSION;
+  if (!forceHard) {
+    writeReloadGuard(targetVersion);
+  }
 
   if (buildStampEl) {
     buildStampEl.classList.remove('checking', 'update-available', 'up-to-date');
@@ -1818,29 +1827,33 @@ async function applyPendingUpdate() {
     buildStampEl.textContent = 'UPDATING...';
   }
 
-  // Purge all shell caches so browser fetches fresh HTML/JS cleanly on reload
+  // 1. Purge ALL browser Cache Storage buckets (clears legacy and current caches alike)
   if ('caches' in window) {
     try {
       const keys = await caches.keys();
-      await Promise.all(
-        keys
-          .filter((k) => k.startsWith('gimme-tv-shell-'))
-          .map((k) => caches.delete(k))
-      );
+      await Promise.all(keys.map((k) => caches.delete(k)));
     } catch (_err) {}
   }
 
-  // Tell any waiting worker to take over cleanly (without relying on controllerchange)
-  if (swRegistration && swRegistration.waiting) {
+  // 2. Unregister ALL active/waiting Service Workers so the next navigation bypasses stale SWs completely
+  if ('serviceWorker' in navigator) {
     try {
-      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
     } catch (_err) {}
   }
 
   if (buildStampEl) buildStampEl.textContent = 'RELOADING...';
   setTimeout(() => {
-    window.location.reload();
-  }, 200);
+    try {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set('v', targetVersion);
+      nextUrl.searchParams.set('_cb', String(Date.now()));
+      window.location.replace(nextUrl.toString());
+    } catch (_err) {
+      window.location.reload();
+    }
+  }, 220);
 }
 
 /**
@@ -1852,7 +1865,13 @@ async function applyPendingUpdate() {
 async function checkPhoneHomeUpdate(isManual = false) {
   // If a verified version update is already flagged and user taps the badge, apply it now
   if (isManual && updateAvailableVersion) {
-    applyPendingUpdate();
+    applyPendingUpdate(false);
+    return;
+  }
+
+  // Escape hatch for stubborn TV/tablet caches: tapping again while "LATEST VERSION ✓" is shown forces a full SW/cache purge reload
+  if (isManual && buildStampEl && buildStampEl.classList.contains('up-to-date')) {
+    applyPendingUpdate(true);
     return;
   }
 
